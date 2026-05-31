@@ -1,0 +1,93 @@
+// src/screens/admin/Dashboard/DashboardAdminScreen.styles.ts
+
+import { StyleSheet, Platform } from 'react-native';
+import { COLORS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '@/theme';
+
+export default StyleSheet.create({
+  container:    { flex: 1, backgroundColor: COLORS.bg },
+  content:      { padding: SPACING.lg, paddingBottom: 100 },
+  header: {
+    flexDirection:     'row',
+    justifyContent:    'space-between',
+    alignItems:        'center',
+    paddingHorizontal: SPACING.lg,
+    paddingTop:        Platform.OS === 'ios' ? 50 : SPACING.lg,
+    paddingBottom:     SPACING.md,
+    backgroundColor:   COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTitle:    { ...TYPOGRAPHY.h2, color: COLORS.navy },
+  avatarCircle: {
+    width:           36,
+    height:          36,
+    borderRadius:    18,
+    backgroundColor: COLORS.primary,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  avatarText:     { color: COLORS.white, fontWeight: '700', fontSize: 16 },
+  pageTitle:      { ...TYPOGRAPHY.h1, color: COLORS.navy, marginBottom: 4 },
+  pageSubtitle:   { ...TYPOGRAPHY.body, color: COLORS.textSecondary, marginBottom: SPACING.xl },
+  kpiCard: {
+    backgroundColor: COLORS.white,
+    borderRadius:    RADIUS.lg,
+    padding:         SPACING.lg,
+    marginBottom:    SPACING.md,
+    ...SHADOWS.card,
+  },
+  kpiTop: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+    marginBottom:   SPACING.md,
+  },
+  kpiIconBox: {
+    width:           44,
+    height:          44,
+    borderRadius:    RADIUS.md,
+    backgroundColor: '#FFF0E6',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  kpiBadge: {
+    borderRadius:    RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical:   3,
+  },
+  kpiBadgeText:   { fontSize: 11, fontWeight: '700' },
+  kpiLabel:       { ...TYPOGRAPHY.caption, color: COLORS.textSecondary, marginBottom: 4 },
+  kpiValue:       { fontSize: 24, fontWeight: '800', color: COLORS.navy },
+  transCard: {
+    backgroundColor: COLORS.white,
+    borderRadius:    RADIUS.lg,
+    padding:         SPACING.lg,
+    marginBottom:    SPACING.md,
+    ...SHADOWS.card,
+  },
+  transHeader: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+    marginBottom:   SPACING.md,
+  },
+  transTitle:     { ...TYPOGRAPHY.h3, color: COLORS.navy },
+  transVerTodo:   { color: COLORS.primary, fontWeight: '600', fontSize: 13 },
+  tableHeader: {
+    flexDirection:     'row',
+    paddingBottom:     SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    marginBottom:      SPACING.sm,
+  },
+  tableHeaderText: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, flex: 1 },
+  tableRow: {
+    flexDirection:     'row',
+    paddingVertical:   SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    alignItems:        'center',
+  },
+  tableCell:      { flex: 1, fontSize: 13, color: COLORS.textPrimary },
+  tableCellBold:  { flex: 1, fontSize: 13, color: COLORS.navy, fontWeight: '600' },
+});

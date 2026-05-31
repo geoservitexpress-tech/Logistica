@@ -1,0 +1,70 @@
+// src/screens/admin/Usuarios/UsuariosScreen.styles.ts
+
+import { StyleSheet, Platform } from 'react-native';
+import { COLORS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '@/theme';
+
+export default StyleSheet.create({
+  container:    { flex: 1, backgroundColor: COLORS.bg },
+  header: {
+    flexDirection:     'row',
+    justifyContent:    'space-between',
+    alignItems:        'center',
+    paddingHorizontal: SPACING.lg,
+    paddingTop:        Platform.OS === 'ios' ? 50 : SPACING.lg,
+    paddingBottom:     SPACING.md,
+    backgroundColor:   COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTitle:   { ...TYPOGRAPHY.h2, color: COLORS.navy },
+  content:       { padding: SPACING.lg, paddingBottom: 100 },
+  pageTitle:     { ...TYPOGRAPHY.h1, color: COLORS.navy, marginBottom: 4 },
+  pageSubtitle:  { ...TYPOGRAPHY.caption, color: COLORS.textSecondary, marginBottom: SPACING.xl },
+  searchWrap: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    backgroundColor:   COLORS.white,
+    borderRadius:      RADIUS.md,
+    borderWidth:       1,
+    borderColor:       COLORS.border,
+    paddingHorizontal: SPACING.md,
+    marginBottom:      SPACING.md,
+    ...SHADOWS.card,
+  },
+  searchInput:   { flex: 1, paddingVertical: SPACING.md, fontSize: 14, color: COLORS.textPrimary },
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius:    RADIUS.lg,
+    padding:         SPACING.lg,
+    marginBottom:    SPACING.md,
+    ...SHADOWS.card,
+  },
+  cardHeader:    { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  avatar: {
+    width:          44,
+    height:         44,
+    borderRadius:   22,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginRight:    SPACING.md,
+  },
+  avatarText:    { color: COLORS.white, fontWeight: '700', fontSize: 18 },
+  nombre:        { fontSize: 15, fontWeight: '700', color: COLORS.navy },
+  correo:        { fontSize: 12, color: COLORS.textSecondary },
+  rolBadge: {
+    alignSelf:         'flex-start',
+    borderRadius:      RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical:   4,
+    marginBottom:      SPACING.sm,
+  },
+  rolText:       { fontSize: 11, fontWeight: '700' },
+  cambiarRolBtn: {
+    borderWidth:     1,
+    borderColor:     COLORS.primary,
+    borderRadius:    RADIUS.md,
+    paddingVertical: SPACING.sm,
+    alignItems:      'center',
+  },
+  cambiarRolText: { color: COLORS.primary, fontWeight: '600', fontSize: 13 },
+});

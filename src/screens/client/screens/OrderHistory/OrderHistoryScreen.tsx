@@ -22,8 +22,6 @@ import type { Order, OrderEstado } from './OrderDetailModal';
 import type { ClientTabParamList } from '@/navigation/navigation.types';
 import { apiClient, ENDPOINTS } from '@/api';
 
-
-
 type Props = BottomTabScreenProps<ClientTabParamList, 'Historial'>;
 
 interface StatusConfig {
@@ -42,58 +40,61 @@ const STATUS_CONFIG: Record<OrderEstado, StatusConfig> = {
     label: 'En espera',
     bg:    '#F3F4F6',
     text:  '#6B7280',
-    icon:  '[E]',
+    icon:  '📋',
   },
   recogida: {
     label: 'Recogida pendiente',
     bg:    '#EDE9FE',
     text:  '#7C3AED',
-    icon:  '[R]',
+    icon:  '📦',
   },
   transito: {
-    label: 'En Transito',
+    label: 'En Tránsito',
     bg:    '#DBEAFE',
     text:  '#2563EB',
-    icon:  '[T]',
+    icon:  '🚚',
   },
   entregado: {
     label: 'Entregado',
     bg:    '#DCFCE7',
     text:  COLORS.success,
-    icon:  '[OK]',
+    icon:  '✅',
+  },
+  noEntregado: {
+    label: 'No entregado',
+    bg:    '#FEE2E2',
+    text:  '#DC2626',
+    icon:  '❌',
   },
   pendiente: {
     label: 'Pendiente',
     bg:    '#FEF3C7',
     text:  '#D97706',
-    icon:  '[P]',
+    icon:  '⏳',
   },
 };
 
-function mapEstado(estadoBackend: string, tipoOperacion?: string): OrderEstado {
-  const lower = estadoBackend.toLowerCase();
-  if (lower.includes('entregado')) return 'entregado';
-  if (
-    lower.includes('camino') ||
-    lower.includes('transito') ||
-    lower.includes('recibido') ||
-    lower.includes('en curso') ||
-    lower.includes('asignado')
-  ) return 'transito';
-  if (lower.includes('creado') || lower.includes('pendiente')) {
-    if (tipoOperacion === 'RECOLECCION') return 'recogida';
-    return 'espera';
+function mapEstadoPorId(idEstado: number, tipoOperacion: string): OrderEstado {
+  switch (idEstado) {
+    case 5: return 'entregado';
+    case 7: return 'noEntregado';
+    case 6: return 'pendiente';
+    case 3:
+    case 4: return 'transito';
+    case 2: return 'transito';
+    case 1:
+    default:
+      return tipoOperacion === 'RECOLECCION' ? 'recogida' : 'espera';
   }
-  return 'pendiente';
 }
 
 function mapBackendToOrder(item: Record<string, unknown>): Order {
+  console.log('ESTADO PEDIDO:', item.idEstadoPedido, item.estadoPedido);
+  const idEstado     = (item.idEstadoPedido as number) ?? 0;
+  const tipoOperacion = (item.tipoOperacion as string) ?? '';
   return {
     id:            (item.numGuia as string) ?? (item.idPedido as string) ?? '',
-    estado:        mapEstado(
-                     (item.estadoPedido as string) ?? '',
-                     (item.tipoOperacion as string) ?? '',
-                   ),
+    estado:        mapEstadoPorId(idEstado, tipoOperacion),
     fecha:         item.creadoEn
                      ? new Date(item.creadoEn as string).toLocaleDateString('es-CO')
                      : '',
@@ -104,13 +105,11 @@ function mapBackendToOrder(item: Record<string, unknown>): Order {
     companyName:   (item.usuarioSolicitud as string) ?? '',
     mensajero:     (item.usuarioRepartidor as string) ?? undefined,
     pago:          (item.metodoRecepcion as string) ?? '',
-    metodoEntrega: (item.tipoOperacion as string) ?? '',
+    metodoEntrega: tipoOperacion,
     fragil:        (item.fragil as boolean) ?? false,
     manifestObs:   (item.observacionesManifiesto as string) ?? undefined,
     fotos:         (item.fotosPaqueteUrls as string[]) ?? [],
   };
-
-  
 }
 
 const StatusBadge = ({ estado }: StatusBadgeProps) => {
@@ -133,29 +132,29 @@ export default function OrderHistoryScreen({ navigation }: Props) {
   const [pedidoSelecto, setPedidoSelecto] = useState<Order | null>(null);
 
   const fetchPedidos = useCallback(async (esRefresh = false): Promise<void> => {
-  if (esRefresh) setRefrescando(true);
-  else setCargando(true);
-  setError(null);
+    if (esRefresh) setRefrescando(true);
+    else setCargando(true);
+    setError(null);
 
-  try {
-    const idUsuario = usuario?.idUsuario;
-    const url = idUsuario
-      ? `${ENDPOINTS.PEDIDOS.GET_ALL}?idUsuario=${idUsuario}`
-      : ENDPOINTS.PEDIDOS.GET_ALL;
+    try {
+      const idUsuario = usuario?.idUsuario;
+      const url = idUsuario
+        ? `${ENDPOINTS.PEDIDOS.GET_ALL}?idUsuario=${idUsuario}`
+        : ENDPOINTS.PEDIDOS.GET_ALL;
 
-    const { data } = await apiClient.get(url);
-    const lista: Order[] = Array.isArray(data)
-      ? data.map((item: Record<string, unknown>) => mapBackendToOrder(item))
-      : [];
-    setPedidos(lista);
-  } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string } }; message?: string };
-    setError(err?.response?.data?.message ?? err?.message ?? 'Error al cargar pedidos');
-  } finally {
-    setCargando(false);
-    setRefrescando(false);
-  }
-}, [usuario?.idUsuario]);
+      const { data } = await apiClient.get(url);
+      const lista: Order[] = Array.isArray(data)
+        ? data.map((item: Record<string, unknown>) => mapBackendToOrder(item))
+        : [];
+      setPedidos(lista);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      setError(err?.response?.data?.message ?? err?.message ?? 'Error al cargar pedidos');
+    } finally {
+      setCargando(false);
+      setRefrescando(false);
+    }
+  }, [usuario?.idUsuario]);
 
   useFocusEffect(
     useCallback(() => {
@@ -295,4 +294,4 @@ export default function OrderHistoryScreen({ navigation }: Props) {
       />
     </View>
   );
-}
+} 

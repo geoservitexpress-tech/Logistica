@@ -1,67 +1,66 @@
 // src/navigation/navigation.types.ts
 
 export type RootStackParamList = {
-  Auth: undefined;
-  ClientApp: undefined;
+  Auth:          undefined;
+  ClientApp:     undefined;
   RepartidorApp: undefined;
   RecolectorApp: undefined;
   SupervisorApp: undefined;
-  AdminApp: undefined;
+  AdminApp:      undefined;
 };
 
 export type AuthStackParamList = {
-  Login: undefined;
+  Login:    undefined;
   Register: undefined;
 };
 
-// ─── Tab principal del cliente ───────────────────────
 export type ClientTabParamList = {
   PedidosTab: undefined;
-  Historial: undefined;
-  Perfil: undefined;
+  Historial:  undefined;
+  Perfil:     undefined;
 };
 
-// ─── Stack interno de la tab Pedidos ─────────────────
 export type PedidosStackParamList = {
-  NuevoPedido: undefined;
+  NuevoPedido:       undefined;
   SolicitarRecogida: undefined;
 };
 
-// ─── Otros roles ─────────────────────────────────────
 export type RepartidorTabParamList = {
-  MiRuta: undefined;
-  Pedidos: undefined;
+  MiRuta:   undefined;
+  Pedidos:  undefined;
   Historial: undefined;
-  Perfil: undefined;
+  Perfil:   undefined;
 };
 
 export type RecolectorTabParamList = {
   Recogidas: undefined;
-  Escaner: undefined;
+  Escaner:   undefined;
   Historial: undefined;
-  Perfil: undefined;
+  Perfil:    undefined;
 };
 
 export type SupervisorTabParamList = {
-  Dashboard: undefined;
-  Tracking: undefined;
+  Dashboard:   undefined;
+  Tracking:    undefined;
   Conductores: undefined;
-  Perfil: undefined;
+  Perfil:      undefined;
 };
 
 export type AdminTabParamList = {
-  Dashboard: undefined;
-  Usuarios: undefined;
-  Operaciones: undefined;
+  Dashboard:    undefined;
+  Usuarios:     undefined;
+  Operaciones:  undefined;
   Configuracion: undefined;
 };
 
 export type RutaStackParamList = {
   MiRutaHome:       { pedidoCompletado?: string } | undefined;
   ConfirmarEntrega: {
-    id:           string;
-    direccion?:   string;
-    destinatario?: string;
-    telefono?:    string;
+    id:                  string;
+    direccion?:          string;
+    destinatario?:       string;
+    telefono?:           string;
+    pagadoPorRemitente?: boolean;
+    precio?:             number;
   };
 };

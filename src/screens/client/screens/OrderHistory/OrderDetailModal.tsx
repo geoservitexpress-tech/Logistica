@@ -5,61 +5,54 @@ import styles from './OrderDetailModal.styles';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
-
-export type OrderEstado = 'entregado' | 'transito' | 'pendiente' | 'espera' | 'recogida';
+export type OrderEstado = 'entregado' | 'noEntregado' | 'transito' | 'pendiente' | 'espera' | 'recogida';
 
 export interface Order {
-  id: string;
-  estado: OrderEstado;
-  fechaEntrega?: string;
-  fecha?: string;
-  destinatario: string;
-  telefono?: string;
-  origen?: string;
-  destino: string;
-  companyName?: string;
-  mensajero?: string;
-  pago?: string;
-  estadoPago?: string;
-  metodoEntrega?: string;
-  weight?: string | number;
-  declaredValue?: string | number;
-  fragil?: boolean;
-  manifestObs?: string;
-  fotos?: string[];
+  id:                   string;
+  estado:               OrderEstado;
+  fechaEntrega?:        string;
+  fecha?:               string;
+  destinatario:         string;
+  telefono?:            string;
+  origen?:              string;
+  destino:              string;
+  companyName?:         string;
+  mensajero?:           string;
+  pago?:                string;
+  estadoPago?:          string;
+  metodoEntrega?:       string;
+  weight?:              string | number;
+  declaredValue?:       string | number;
+  fragil?:              boolean;
+  manifestObs?:         string;
+  fotos?:               string[];
   observacionesEntrega?: string;
 }
 
 interface BadgeConfig {
-  style: object;
+  style:     object;
   textStyle: object;
-  label: string;
+  label:     string;
 }
 
 interface OrderDetailModalProps {
   visible: boolean;
-  order: Order | null;
+  order:   Order | null;
   onClose: () => void;
 }
-
-// ──────────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────────
 
 export default function OrderDetailModal({ visible, order, onClose }: OrderDetailModalProps) {
   if (!order) return null;
 
-  const isEntregado: boolean = order.estado === 'entregado';
-  const isTransito: boolean  = order.estado === 'transito';
+  const isEntregado:   boolean = order.estado === 'entregado';
+  const isNoEntregado: boolean = order.estado === 'noEntregado';
+  const isTransito:    boolean = order.estado === 'transito';
 
   const getBadge = (): BadgeConfig => {
-    if (isEntregado) return { style: styles.badgeSuccess, textStyle: styles.badgeSuccessText, label: '✅ Entregado' };
-    if (isTransito)  return { style: styles.badgeTransit, textStyle: styles.badgeTransitText, label: '🔄 En Tránsito' };
-    return                  { style: styles.badgePending,  textStyle: styles.badgePendingText,  label: '⏳ Pendiente' };
+    if (isEntregado)   return { style: styles.badgeSuccess, textStyle: styles.badgeSuccessText, label: '✅ Entregado' };
+    if (isNoEntregado) return { style: { backgroundColor: '#FEE2E2', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }, textStyle: { color: '#DC2626', fontWeight: '700' as const, fontSize: 13 }, label: '❌ No entregado' };
+    if (isTransito)    return { style: styles.badgeTransit, textStyle: styles.badgeTransitText, label: '🔄 En Tránsito' };
+    return                    { style: styles.badgePending, textStyle: styles.badgePendingText,  label: '⏳ Pendiente' };
   };
 
   const badge: BadgeConfig = getBadge();
@@ -181,13 +174,38 @@ export default function OrderDetailModal({ visible, order, onClose }: OrderDetai
               <View style={[styles.badge, badge.style]}>
                 <Text style={[styles.badgeText, badge.textStyle]}>{badge.label}</Text>
               </View>
-              {isEntregado && order.fechaEntrega && (
+              {(isEntregado || isNoEntregado) && order.fechaEntrega && (
                 <View style={styles.dateRow}>
                   <Text style={styles.dateIcon}>📅</Text>
                   <Text style={styles.dateText}>{order.fechaEntrega}</Text>
                 </View>
               )}
             </View>
+
+            {/* Banner no entregado */}
+            {isNoEntregado && (
+              <View style={{
+                backgroundColor: '#FEF2F2',
+                borderRadius:    12,
+                padding:         14,
+                marginBottom:    12,
+                borderWidth:     1,
+                borderColor:     '#FECACA',
+                flexDirection:   'row',
+                alignItems:      'center',
+                gap:             10,
+              }}>
+                <Text style={{ fontSize: 24 }}>❌</Text>
+                <View>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#DC2626' }}>
+                    Pedido no entregado
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 2 }}>
+                    El repartidor no pudo completar la entrega
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Mensajero */}
             {order.mensajero && (
@@ -240,6 +258,19 @@ export default function OrderDetailModal({ visible, order, onClose }: OrderDetai
               <Text style={styles.routeText}>{order.origen ?? 'Bogotá, CO'} → {order.destino}</Text>
             </View>
 
+            {/* Observaciones del manifiesto */}
+            {order.manifestObs && (
+              <View style={styles.infoCard}>
+                <View style={styles.infoCardRow}>
+                  <Text>📝</Text>
+                  <Text style={styles.infoCardTitle}>Observaciones</Text>
+                </View>
+                <Text style={{ fontSize: 14, color: COLORS.textPrimary, marginTop: 4 }}>
+                  {order.manifestObs}
+                </Text>
+              </View>
+            )}
+
             {/* Fotos si tiene */}
             {order.fotos && order.fotos.length > 0 && (
               <>
@@ -252,19 +283,6 @@ export default function OrderDetailModal({ visible, order, onClose }: OrderDetai
               </>
             )}
 
-            {/* Evidencia si entregado */}
-            {isEntregado && !order.fotos?.length && (
-              <>
-                <Text style={styles.sectionLabel}>EVIDENCIA DE ENTREGA</Text>
-                <View style={styles.evidenceRow}>
-                  {[0, 1].map((i: number) => (
-                    <View key={i} style={styles.evidenceThumb}>
-                      <Text style={{ fontSize: 30 }}>📷</Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            )}
           </ScrollView>
 
           {/* Acciones */}

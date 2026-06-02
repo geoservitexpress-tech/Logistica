@@ -223,10 +223,16 @@ export default function MiRutaScreen({ navigation }: Props) {
                 )}
                 <TouchableOpacity
                   style={[isActive ? styles.actionBtnActive : styles.actionBtnOutline, { flex: 2 }]}
-                  onPress={() => navigation.navigate('ConfirmarEntrega', {
-                    id: pedido.id, direccion: pedido.direccion,
-                    destinatario: pedido.destinatario, telefono: pedido.telefono,
-                  })}
+                  onPress={() =>
+                    navigation.navigate('ConfirmarEntrega', {
+                      id:                 pedido.id,
+                      direccion:          pedido.direccion,
+                      destinatario:       pedido.destinatario,
+                      telefono:           pedido.telefono,
+                      pagadoPorRemitente: pedido.pagadoPorRemitente,
+                      precio:             pedido.precio,
+                    })
+                  }
                 >
                   <Text style={isActive ? styles.actionBtnTextActive : styles.actionBtnTextOutline}>
                     {pedido.accion}

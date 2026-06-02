@@ -34,6 +34,16 @@ type Props = NativeStackScreenProps<PedidosStackParamList, 'NuevoPedido'>;
 
 type TipoPago = 'pagado' | 'cobrar_entrega';
 
+const METODOS_PAGO_CATALOGO = [
+  { id: 1, label: 'Efectivo' },
+  { id: 2, label: 'Transferencia' },
+  { id: 3, label: 'Bre-B' },
+  { id: 4, label: 'Datafono' },
+  { id: 5, label: 'Nequi' },
+  { id: 6, label: 'Daviplata' },
+  { id: 7, label: 'QR / Link de pago' },
+];
+
 interface CatalogoItem {
   id:     string;
   nombre: string;
@@ -64,6 +74,7 @@ interface FormState {
   nombreCiudad:       string;
   tipoPago:           TipoPago;
   valorCobrar:        string;
+  idMetodoPago:       number;
 }
 
 interface SectionCardProps {
@@ -132,11 +143,12 @@ const FORM_INICIAL: FormState = {
   nombreCiudad:       '',
   tipoPago:           'pagado',
   valorCobrar:        '',
+  idMetodoPago:       2,
 };
 
 const OPCIONES_PAGO: { key: TipoPago; label: string; desc: string; icon: string }[] = [
-  { key: 'pagado',          label: 'Ya está pagado',          desc: 'El cliente ya canceló el valor',           icon: '✅' },
-  { key: 'cobrar_entrega',  label: 'Cobrar al entregar',      desc: 'El repartidor cobra al destinatario',      icon: '💵' },
+  { key: 'pagado',         label: 'Ya está pagado',     desc: 'El cliente ya canceló el valor',      icon: '✅' },
+  { key: 'cobrar_entrega', label: 'Cobrar al entregar', desc: 'El repartidor cobra al destinatario', icon: '💵' },
 ];
 
 const SectionCard = ({ icon, title, children }: SectionCardProps) => (
@@ -343,7 +355,7 @@ export default function NewOrderScreen({ navigation }: Props) {
       manana.setDate(manana.getDate() + 1);
       const fechaEntrega = manana.toISOString().slice(0, 10);
 
-      const pagadoPorRemitente = form.tipoPago === 'pagado' || form.tipoPago === 'flete_remitente';
+      const pagadoPorRemitente = form.tipoPago === 'pagado';
       const precio             = form.tipoPago === 'cobrar_entrega'
         ? parseFloat(form.valorCobrar) || 0
         : 0;
@@ -369,6 +381,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         observacionesManifiesto: form.manifestObs || undefined,
         pagadoPorRemitente,
         ...(precio > 0 && { precio }),
+        ...(pagadoPorRemitente && { idMetodoPago: form.idMetodoPago }),
         ...(fotosPaqueteBase64.length > 0 && { fotosPaqueteBase64 }),
       };
 
@@ -504,7 +517,7 @@ export default function NewOrderScreen({ navigation }: Props) {
           {OPCIONES_PAGO.map((op) => (
             <TouchableOpacity
               key={op.key}
-              onPress={() => setForm((p) => ({ ...p, tipoPago: op.key, valorCobrar: '' }))}
+              onPress={() => setForm((p) => ({ ...p, tipoPago: op.key, valorCobrar: '', idMetodoPago: 2 }))}
               style={{
                 flexDirection:   'row',
                 alignItems:      'center',
@@ -547,7 +560,38 @@ export default function NewOrderScreen({ navigation }: Props) {
             </TouchableOpacity>
           ))}
 
-          {/* VALOR A COBRAR */}
+          {/* MÉTODO DE PAGO — solo si ya está pagado */}
+          {form.tipoPago === 'pagado' && (
+            <View style={{ marginTop: 4 }}>
+              <InputLabel label="¿Cómo fue pagado?" required />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {METODOS_PAGO_CATALOGO.map((m) => (
+                    <TouchableOpacity
+                      key={m.id}
+                      onPress={() => setForm(p => ({ ...p, idMetodoPago: m.id }))}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical:   8,
+                        borderRadius:      999,
+                        backgroundColor:   form.idMetodoPago === m.id ? COLORS.primary : '#F1F5F9',
+                      }}
+                    >
+                      <Text style={{
+                        color:      form.idMetodoPago === m.id ? '#fff' : '#64748B',
+                        fontWeight: '600',
+                        fontSize:   13,
+                      }}>
+                        {m.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* VALOR A COBRAR — solo si cobrar al entregar */}
           {form.tipoPago === 'cobrar_entrega' && (
             <View style={{ marginTop: 4 }}>
               <InputLabel label="Valor a cobrar al entregar" required />

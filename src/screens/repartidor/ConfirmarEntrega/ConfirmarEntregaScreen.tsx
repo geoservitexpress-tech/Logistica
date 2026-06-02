@@ -23,9 +23,7 @@ type Props = NativeStackScreenProps<RutaStackParamList, 'ConfirmarEntrega'>;
 
 const RESULTADOS = [
   { id: 1, label: 'Exitoso' },
-  { id: 2, label: 'Exitoso con comentarios' },
   { id: 3, label: 'No entregado' },
-  { id: 4, label: 'Rechazado por el destinatario' },
 ];
 
 const METODOS_PAGO = [

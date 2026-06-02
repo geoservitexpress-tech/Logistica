@@ -36,7 +36,6 @@ const ESTADOS = [
   { id: 3, nombre: 'Recibido' },
   { id: 4, nombre: 'En curso' },
   { id: 5, nombre: 'Entregado' },
-  { id: 6, nombre: 'Cancelado' },
   { id: 7, nombre: 'No entregado' },
 ];
 

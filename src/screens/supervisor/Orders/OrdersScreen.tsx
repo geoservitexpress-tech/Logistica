@@ -32,28 +32,28 @@ interface Pedido {
   precio:             number | null;
 }
 
-type Vista    = 'enReparto' | 'historial';
-type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'Cancelado' | 'No entregado';
+type Vista        = 'enReparto' | 'historial';
+type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'No entregado';
 
-const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'Cancelado', 'No entregado'];
+const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'No entregado'];
 
-const ESTADO_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  'creado':                     { bg: '#F3F4F6', text: '#6B7280', label: 'PENDIENTE' },
-  'asignado':                   { bg: '#FEF3C7', text: '#D97706', label: 'ASIGNADO' },
-  'recibido por el repartidor': { bg: '#DBEAFE', text: '#2563EB', label: 'EN TRÁNSITO' },
-  'en curso':                   { bg: '#DBEAFE', text: '#2563EB', label: 'EN CURSO' },
-  'entregado':                  { bg: '#DCFCE7', text: '#16A34A', label: 'ENTREGADO' },
-  'cancelado':                  { bg: '#FEE2E2', text: '#DC2626', label: 'CANCELADO' },
-  'no entregado':               { bg: '#FEE2E2', text: '#DC2626', label: 'NO ENTREGADO' },
+const FILTRO_IDS: Record<FiltroEstado, number[]> = {
+  'Todos':        [],
+  'Asignado':     [2, 3],
+  'En curso':     [4],
+  'Entregado':    [5],
+  'No entregado': [7],
 };
 
-function getEstadoConfig(estado: string) {
-  const key = estado.toLowerCase();
-  for (const [k, v] of Object.entries(ESTADO_CONFIG)) {
-    if (key.includes(k)) return v;
-  }
-  return { bg: '#F3F4F6', text: '#6B7280', label: estado.toUpperCase() };
-}
+const ESTADO_ID_CONFIG: Record<number, { bg: string; text: string; label: string }> = {
+  1: { bg: '#F3F4F6', text: '#6B7280', label: 'CREADO' },
+  2: { bg: '#FEF3C7', text: '#D97706', label: 'ASIGNADO' },
+  3: { bg: '#DBEAFE', text: '#2563EB', label: 'EN TRÁNSITO' },
+  4: { bg: '#DBEAFE', text: '#2563EB', label: 'EN CURSO' },
+  5: { bg: '#DCFCE7', text: '#16A34A', label: 'ENTREGADO' },
+  6: { bg: '#FEE2E2', text: '#DC2626', label: 'CANCELADO' },
+  7: { bg: '#FEE2E2', text: '#DC2626', label: 'NO ENTREGADO' },
+};
 
 function getNombre(val: string | null | object): string {
   if (typeof val === 'string') return val;
@@ -96,13 +96,13 @@ export default function OrdersScreen({ navigation }: Props) {
     const matchBusqueda =
       p.numGuia.toLowerCase().includes(busqueda.toLowerCase()) ||
       nombre.toLowerCase().includes(busqueda.toLowerCase());
-    const matchFiltro = filtro === 'Todos' ||
-      p.estadoPedido?.toLowerCase().includes(filtro.toLowerCase());
+    const ids = FILTRO_IDS[filtro];
+    const matchFiltro = filtro === 'Todos' || ids.includes(p.idEstadoPedido);
     return matchBusqueda && matchFiltro;
   });
 
   const renderCard = (pedido: Pedido) => {
-    const cfg        = getEstadoConfig(pedido.estadoPedido ?? '');
+    const cfg        = ESTADO_ID_CONFIG[pedido.idEstadoPedido] ?? { bg: '#F3F4F6', text: '#6B7280', label: 'DESCONOCIDO' };
     const nombre     = getNombre(pedido.destinatarioNombre);
     const repartidor = getNombre(pedido.usuarioRepartidor);
     const inicial    = repartidor !== 'Sin asignar' ? repartidor.charAt(0).toUpperCase() : '?';
@@ -131,15 +131,15 @@ export default function OrdersScreen({ navigation }: Props) {
               <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 12 }}>{inicial}</Text>
             </View>
             <View>
-              <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>COURIER</Text>
+              <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>REPARTIDOR</Text>
               <Text style={styles.repartidorNombre}>{repartidor}</Text>
             </View>
           </View>
           {pedido.precio != null && (
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>AMOUNT</Text>
+              <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>MONTO</Text>
               <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.navy }}>
-                ${pedido.precio.toLocaleString('es-CO')} COP
+                ${Math.round(parseFloat(String(pedido.precio))).toLocaleString('es-CO')} COP
               </Text>
             </View>
           )}
@@ -169,7 +169,7 @@ export default function OrdersScreen({ navigation }: Props) {
       {/* HEADER */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Order Management</Text>
+          <Text style={styles.headerTitle}>Gestión de Pedidos</Text>
           <Text style={styles.headerSubtitle}>
             {vista === 'enReparto'
               ? `${pedidosReparto.length} envíos activos`
@@ -190,9 +190,9 @@ export default function OrdersScreen({ navigation }: Props) {
             key={v}
             onPress={() => { setVista(v); setFiltro('Todos'); }}
             style={{
-              flex:            1,
-              paddingVertical: 14,
-              alignItems:      'center',
+              flex:              1,
+              paddingVertical:   14,
+              alignItems:        'center',
               borderBottomWidth: vista === v ? 2 : 0,
               borderBottomColor: COLORS.primary,
             }}
@@ -214,15 +214,12 @@ export default function OrdersScreen({ navigation }: Props) {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search orders..."
+            placeholder="Buscar pedidos..."
             placeholderTextColor={COLORS.textMuted}
             value={busqueda}
             onChangeText={setBusqueda}
           />
         </View>
-        <TouchableOpacity style={styles.filterBtn}>
-          <Text>⚙️</Text>
-        </TouchableOpacity>
       </View>
 
       {/* FILTROS */}

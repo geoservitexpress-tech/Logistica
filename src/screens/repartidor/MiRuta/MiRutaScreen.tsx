@@ -43,10 +43,19 @@ export default function MiRutaScreen({ navigation }: Props) {
   const totalRecoger  = pedidosPendientes.filter((p) => p.tipoOperacion === 'RECOLECCION').length;
   const totalEntregar = pedidosPendientes.filter((p) => p.tipoOperacion !== 'RECOLECCION').length;
 
-  const abrirMaps = (lat: number, lng: number): void => {
-    Alert.alert('Abrir navegacion', 'Selecciona la app de navegacion', [
+  const abrirMapsConCoordenadas = (lat: number, lng: number): void => {
+    Alert.alert('Abrir navegación', 'Selecciona la app', [
       { text: 'Google Maps', onPress: () => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`).catch(() => Alert.alert('Error', 'No se pudo abrir Google Maps')) },
       { text: 'Waze',        onPress: () => Linking.openURL(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`).catch(() => Alert.alert('Error', 'No se pudo abrir Waze')) },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
+  const abrirMapsConDireccion = (direccion: string): void => {
+    const dir = encodeURIComponent(direccion + ', Bogotá, Colombia');
+    Alert.alert('Abrir navegación', 'Selecciona la app', [
+      { text: 'Google Maps', onPress: () => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dir}`).catch(() => Alert.alert('Error', 'No se pudo abrir Google Maps')) },
+      { text: 'Waze',        onPress: () => Linking.openURL(`https://waze.com/ul?q=${dir}&navigate=yes`).catch(() => Alert.alert('Error', 'No se pudo abrir Waze')) },
       { text: 'Cancelar', style: 'cancel' },
     ]);
   };
@@ -121,7 +130,7 @@ export default function MiRutaScreen({ navigation }: Props) {
               <Text style={styles.bodegaCiudad}>Bogota, Cundinamarca</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.wazeBtn} onPress={() => abrirMaps(BODEGA_LAT, BODEGA_LNG)}>
+          <TouchableOpacity style={styles.wazeBtn} onPress={() => abrirMapsConCoordenadas(BODEGA_LAT, BODEGA_LNG)}>
             <Text style={{ color: '#fff', fontSize: 16, marginRight: 8 }}>🧭</Text>
             <Text style={styles.wazeBtnText}>Abrir en Waze/Google Maps</Text>
           </TouchableOpacity>
@@ -215,12 +224,14 @@ export default function MiRutaScreen({ navigation }: Props) {
                 <Text style={styles.obsText}>{pedido.observacion}</Text>
               </View>
 
+              {/* BOTONES */}
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                {pedido.lat && pedido.lng && (
-                  <TouchableOpacity style={[styles.actionBtnOutline, { flex: 1 }]} onPress={() => abrirMaps(pedido.lat!, pedido.lng!)}>
-                    <Text style={styles.actionBtnTextOutline}>Navegar</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={[styles.actionBtnOutline, { flex: 1 }]}
+                  onPress={() => abrirMapsConDireccion(pedido.direccion)}
+                >
+                  <Text style={styles.actionBtnTextOutline}>🧭 Navegar</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[isActive ? styles.actionBtnActive : styles.actionBtnOutline, { flex: 2 }]}
                   onPress={() =>

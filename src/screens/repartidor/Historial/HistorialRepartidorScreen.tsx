@@ -23,6 +23,7 @@ interface PedidoHistorial {
   destinatarioNombre: string | null | object;
   direccion:          string;
   fechaEntrega:       string;
+  creadoEn:           string;
   tipoOperacion:      string;
 }
 
@@ -40,7 +41,6 @@ export default function HistorialRepartidorScreen() {
     try {
       const { data } = await apiClient.get('/repartidor/pedidos');
       const lista = Array.isArray(data) ? data : [];
-      // Estados 5=Entregado y 7=No entregado
       setPedidos(lista.filter((p: Record<string, unknown>) =>
         p.idEstadoPedido === 5 || p.idEstadoPedido === 7
       ));
@@ -61,8 +61,8 @@ export default function HistorialRepartidorScreen() {
     semana.setDate(semana.getDate() - 7);
 
     return lista.filter((p) => {
-      const fecha = new Date(p.fechaEntrega);
-      if (filtroTiempo === 'hoy')   return fecha >= hoy;
+      const fecha = new Date(p.creadoEn ?? p.fechaEntrega);
+      if (filtroTiempo === 'hoy')    return fecha >= hoy;
       if (filtroTiempo === 'semana') return fecha >= semana;
       return true;
     });

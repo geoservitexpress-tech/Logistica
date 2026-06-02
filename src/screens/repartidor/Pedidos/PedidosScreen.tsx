@@ -33,6 +33,8 @@ interface PedidoAPI {
   tipoOperacion:           string;
   observacionesManifiesto: string | null;
   fotosPaqueteUrls:        string[];
+  pagadoPorRemitente:      boolean;
+  precio:                  number;
 }
 
 function apiToPedidoCliente(p: PedidoAPI): PedidoCliente {
@@ -61,24 +63,42 @@ function TipoOperacionBadge({ tipo, fragil }: { tipo: string; fragil: boolean })
         borderRadius:      999,
         backgroundColor:   esRecoleccion ? '#FEF3C7' : '#DBEAFE',
       }}>
-        <Text style={{
-          fontSize:   11,
-          fontWeight: '700',
-          color:      esRecoleccion ? '#D97706' : '#1D4ED8',
-        }}>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: esRecoleccion ? '#D97706' : '#1D4ED8' }}>
           {esRecoleccion ? '📦 RECOGER' : '🚚 ENTREGAR'}
         </Text>
       </View>
       {fragil && (
-        <View style={{
-          paddingHorizontal: 10,
-          paddingVertical:   4,
-          borderRadius:      999,
-          backgroundColor:   '#FEE2E2',
-        }}>
+        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: '#FEE2E2' }}>
           <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>⚠️ FRAGIL</Text>
         </View>
       )}
+    </View>
+  );
+}
+
+function EstadoPagoBadge({ pagadoPorRemitente, precio }: { pagadoPorRemitente: boolean; precio: number }) {
+  const precioNum = parseFloat(String(precio)) || 0;
+  return (
+    <View style={{
+      flexDirection:   'row',
+      alignItems:      'center',
+      gap:             8,
+      marginTop:       8,
+      padding:         10,
+      borderRadius:    8,
+      backgroundColor: pagadoPorRemitente ? '#DCFCE7' : '#FEF3C7',
+    }}>
+      <Text style={{ fontSize: 16 }}>{pagadoPorRemitente ? '✅' : '💵'}</Text>
+      <View>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: pagadoPorRemitente ? '#16A34A' : '#D97706' }}>
+          {pagadoPorRemitente ? 'Ya está pagado' : 'Cobrar al entregar'}
+        </Text>
+        {!pagadoPorRemitente && precioNum > 0 && (
+          <Text style={{ fontSize: 11, color: '#D97706' }}>
+            Valor a cobrar: ${precioNum.toLocaleString('es-CO')} COP
+          </Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -107,11 +127,7 @@ export default function PedidosScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      cargarPedidos();
-    }, []),
-  );
+  useFocusEffect(useCallback(() => { cargarPedidos(); }, []));
 
   const aceptarPedido = async (item: PedidoAPI): Promise<void> => {
     Alert.alert(
@@ -182,12 +198,12 @@ export default function PedidosScreen() {
         {/* STATS */}
         <View style={styles.statsRow}>
           <View style={[styles.statBox, styles.statBoxSpacing]}>
-            <Text style={styles.statIcon}>{'📦'}</Text>
+            <Text style={styles.statIcon}>📦</Text>
             <Text style={styles.statNum}>{pedidos.filter(p => p.tipoOperacion === 'RECOLECCION').length}</Text>
             <Text style={styles.statLabel}>Recoger</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statIcon}>{'🚚'}</Text>
+            <Text style={styles.statIcon}>🚚</Text>
             <Text style={styles.statNum}>{pedidos.filter(p => p.tipoOperacion !== 'RECOLECCION').length}</Text>
             <Text style={styles.statLabel}>Entregar</Text>
           </View>
@@ -195,7 +211,7 @@ export default function PedidosScreen() {
 
         {/* SEARCH */}
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>{'[S]'}</Text>
+          <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             placeholder="Buscar pedidos..."
             placeholderTextColor="#94A3B8"
@@ -228,11 +244,16 @@ export default function PedidosScreen() {
 
               <TipoOperacionBadge tipo={item.tipoOperacion} fragil={item.fragil} />
 
+              <EstadoPagoBadge
+                pagadoPorRemitente={item.pagadoPorRemitente}
+                precio={item.precio}
+              />
+
               <Text style={[styles.clientName, { marginTop: 8 }]}>
                 {typeof item.destinatarioNombre === 'string' ? item.destinatarioNombre : 'Sin destinatario'}
               </Text>
               <View style={styles.locRow}>
-                <Text>{'[P] '}</Text>
+                <Text>📍 </Text>
                 <Text style={styles.locText}>{item.direccion}</Text>
               </View>
 

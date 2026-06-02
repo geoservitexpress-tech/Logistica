@@ -1,6 +1,6 @@
 ﻿// src/screens/client/screens/Orders/NewOrderScreen.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '@/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +31,8 @@ import type { PedidosStackParamList } from '@/navigation/navigation.types';
 import { apiClient, ENDPOINTS } from '@/api';
 
 type Props = NativeStackScreenProps<PedidosStackParamList, 'NuevoPedido'>;
+
+type TipoPago = 'pagado' | 'cobrar_entrega';
 
 interface CatalogoItem {
   id:     string;
@@ -59,6 +62,8 @@ interface FormState {
   nombreDepartamento: string;
   idCiudad:           string;
   nombreCiudad:       string;
+  tipoPago:           TipoPago;
+  valorCobrar:        string;
 }
 
 interface SectionCardProps {
@@ -125,7 +130,14 @@ const FORM_INICIAL: FormState = {
   nombreDepartamento: '',
   idCiudad:           '',
   nombreCiudad:       '',
+  tipoPago:           'pagado',
+  valorCobrar:        '',
 };
+
+const OPCIONES_PAGO: { key: TipoPago; label: string; desc: string; icon: string }[] = [
+  { key: 'pagado',          label: 'Ya está pagado',          desc: 'El cliente ya canceló el valor',           icon: '✅' },
+  { key: 'cobrar_entrega',  label: 'Cobrar al entregar',      desc: 'El repartidor cobra al destinatario',      icon: '💵' },
+];
 
 const SectionCard = ({ icon, title, children }: SectionCardProps) => (
   <View style={styles.card}>
@@ -189,12 +201,8 @@ const CatalogoMenu = ({ visible, title, items, onSelect, onClose }: CatalogoMenu
       <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1} />
       <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: 400 }}>
         <Text style={{
-          fontSize: 14,
-          fontWeight: '700',
-          color: COLORS.textPrimary,
-          padding: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.border,
+          fontSize: 14, fontWeight: '700', color: COLORS.textPrimary,
+          padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border,
         }}>
           {title}
         </Text>
@@ -219,8 +227,8 @@ const CatalogoMenu = ({ visible, title, items, onSelect, onClose }: CatalogoMenu
 export default function NewOrderScreen({ navigation }: Props) {
   const { usuario } = useAuth();
 
-  const [form, setForm]         = useState<FormState>(FORM_INICIAL);
-  const [fotos, setFotos]       = useState<string[]>([]);
+  const [form,     setForm]     = useState<FormState>(FORM_INICIAL);
+  const [fotos,    setFotos]    = useState<string[]>([]);
   const [enviando, setEnviando] = useState<boolean>(false);
 
   const [paises,        setPaises]        = useState<CatalogoItem[]>([]);
@@ -239,6 +247,13 @@ export default function NewOrderScreen({ navigation }: Props) {
   const [showDeptoMenu,   setShowDeptoMenu]   = useState<boolean>(false);
   const [showCiudadMenu,  setShowCiudadMenu]  = useState<boolean>(false);
 
+  useFocusEffect(
+    useCallback(() => {
+      setShowDeliveryModal(false);
+      setShowGuiaModal(false);
+    }, []),
+  );
+
   useEffect(() => {
     async function cargarCatalogos() {
       try {
@@ -247,22 +262,9 @@ export default function NewOrderScreen({ navigation }: Props) {
           apiClient.get(ENDPOINTS.CATALOGO.DEPARTAMENTOS),
           apiClient.get(ENDPOINTS.CATALOGO.CIUDADES),
         ]);
-
-        setPaises(rPaises.data.map((p: Record<string, string>) => ({
-          id:     String(p.idPais),
-          nombre: p.nombre,
-        })));
-
-        setDepartamentos(rDeptos.data.map((d: Record<string, string>) => ({
-          id:     String(d.idDepartamento),
-          nombre: d.nombre,
-        })));
-
-        setCiudades(rCiudades.data.map((c: Record<string, string>) => ({
-          id:     String(c.idCiudad),
-          nombre: c.nombre,
-        })));
-
+        setPaises(rPaises.data.map((p: Record<string, string>) => ({ id: String(p.idPais), nombre: p.nombre })));
+        setDepartamentos(rDeptos.data.map((d: Record<string, string>) => ({ id: String(d.idDepartamento), nombre: d.nombre })));
+        setCiudades(rCiudades.data.map((c: Record<string, string>) => ({ id: String(c.idCiudad), nombre: c.nombre })));
       } catch (e) {
         console.log('ERROR CATALOGOS:', e);
       }
@@ -312,12 +314,15 @@ export default function NewOrderScreen({ navigation }: Props) {
       Alert.alert('Campos requeridos', 'Completa la direccion de entrega.');
       return;
     }
+    if (form.tipoPago === 'cobrar_entrega' && !form.valorCobrar) {
+      Alert.alert('Campos requeridos', 'Ingresa el valor a cobrar al entregar.');
+      return;
+    }
     setShowDeliveryModal(true);
   };
 
   const confirmarPedido = async (): Promise<void> => {
     setEnviando(true);
-
     try {
       const fotosPaqueteBase64: string[] = [];
       for (const uri of fotos) {
@@ -338,6 +343,11 @@ export default function NewOrderScreen({ navigation }: Props) {
       manana.setDate(manana.getDate() + 1);
       const fechaEntrega = manana.toISOString().slice(0, 10);
 
+      const pagadoPorRemitente = form.tipoPago === 'pagado' || form.tipoPago === 'flete_remitente';
+      const precio             = form.tipoPago === 'cobrar_entrega'
+        ? parseFloat(form.valorCobrar) || 0
+        : 0;
+
       const body = {
         idTipoPedido:            1,
         fechaEntrega,
@@ -357,6 +367,8 @@ export default function NewOrderScreen({ navigation }: Props) {
         valorDeclarado:          parseFloat(form.declaredValue) || 0,
         fragil:                  form.fragile,
         observacionesManifiesto: form.manifestObs || undefined,
+        pagadoPorRemitente,
+        ...(precio > 0 && { precio }),
         ...(fotosPaqueteBase64.length > 0 && { fotosPaqueteBase64 }),
       };
 
@@ -381,8 +393,8 @@ export default function NewOrderScreen({ navigation }: Props) {
       };
 
       setPedidoCreado(nuevo);
-      setShowGuiaModal(true);
       resetForm();
+      setShowGuiaModal(true);
 
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: unknown } }; message?: string };
@@ -483,6 +495,77 @@ export default function NewOrderScreen({ navigation }: Props) {
           </View>
         </SectionCard>
 
+        {/* SECCION PAGO */}
+        <SectionCard icon="💳" title="Estado del Pago">
+          <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 12 }}>
+            ¿El producto ya está pagado o hay que cobrar al entregar?
+          </Text>
+
+          {OPCIONES_PAGO.map((op) => (
+            <TouchableOpacity
+              key={op.key}
+              onPress={() => setForm((p) => ({ ...p, tipoPago: op.key, valorCobrar: '' }))}
+              style={{
+                flexDirection:   'row',
+                alignItems:      'center',
+                padding:         14,
+                borderRadius:    12,
+                borderWidth:     2,
+                borderColor:     form.tipoPago === op.key ? COLORS.primary : COLORS.border,
+                backgroundColor: form.tipoPago === op.key ? '#FFF7F0' : COLORS.white,
+                marginBottom:    10,
+                gap:             12,
+              }}
+            >
+              <Text style={{ fontSize: 24 }}>{op.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize:   14,
+                  fontWeight: '700',
+                  color:      form.tipoPago === op.key ? COLORS.primary : COLORS.textPrimary,
+                }}>
+                  {op.label}
+                </Text>
+                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
+                  {op.desc}
+                </Text>
+              </View>
+              <View style={{
+                width:           22,
+                height:          22,
+                borderRadius:    11,
+                borderWidth:     2,
+                borderColor:     form.tipoPago === op.key ? COLORS.primary : COLORS.border,
+                backgroundColor: form.tipoPago === op.key ? COLORS.primary : 'transparent',
+                alignItems:      'center',
+                justifyContent:  'center',
+              }}>
+                {form.tipoPago === op.key && (
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          {/* VALOR A COBRAR */}
+          {form.tipoPago === 'cobrar_entrega' && (
+            <View style={{ marginTop: 4 }}>
+              <InputLabel label="Valor a cobrar al entregar" required />
+              <View style={styles.valueContainer}>
+                <Text style={styles.currencySymbol}>$</Text>
+                <TextInput
+                  style={styles.valueInput}
+                  value={form.valorCobrar}
+                  onChangeText={update('valorCobrar')}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  placeholderTextColor={COLORS.textMuted}
+                />
+              </View>
+            </View>
+          )}
+        </SectionCard>
+
         <SectionCard icon="[M]" title="Detalles del Manifiesto">
           <InputLabel label="Metodo de Pago" required />
           <Dropdown value={form.metodoPago} onPress={() => setShowPagoMenu(true)} />
@@ -551,12 +634,9 @@ export default function NewOrderScreen({ navigation }: Props) {
         onSelect={(item) => {
           setForm(p => ({
             ...p,
-            idPais:             item.id,
-            nombrePais:         item.nombre,
-            idDepartamento:     '',
-            nombreDepartamento: '',
-            idCiudad:           '',
-            nombreCiudad:       '',
+            idPais: item.id, nombrePais: item.nombre,
+            idDepartamento: '', nombreDepartamento: '',
+            idCiudad: '', nombreCiudad: '',
           }));
         }}
         onClose={() => setShowPaisMenu(false)}
@@ -568,10 +648,8 @@ export default function NewOrderScreen({ navigation }: Props) {
         onSelect={(item) => {
           setForm(p => ({
             ...p,
-            idDepartamento:     item.id,
-            nombreDepartamento: item.nombre,
-            idCiudad:           '',
-            nombreCiudad:       '',
+            idDepartamento: item.id, nombreDepartamento: item.nombre,
+            idCiudad: '', nombreCiudad: '',
           }));
         }}
         onClose={() => setShowDeptoMenu(false)}
@@ -581,11 +659,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         title="Seleccionar Ciudad"
         items={ciudades}
         onSelect={(item) => {
-          setForm(p => ({
-            ...p,
-            idCiudad:     item.id,
-            nombreCiudad: item.nombre,
-          }));
+          setForm(p => ({ ...p, idCiudad: item.id, nombreCiudad: item.nombre }));
         }}
         onClose={() => setShowCiudadMenu(false)}
       />
@@ -595,6 +669,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         onClose={() => setShowDeliveryModal(false)}
         onPickup={() => {
           setShowDeliveryModal(false);
+          resetForm();
           navigation.navigate('SolicitarRecogida');
         }}
         onPhysicalPoint={() => {

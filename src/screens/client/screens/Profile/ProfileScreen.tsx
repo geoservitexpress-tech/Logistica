@@ -23,23 +23,19 @@ export default function ProfileScreen() {
   const [totalEnvios, setTotalEnvios] = useState<number>(0);
   const [entregados,  setEntregados]  = useState<number>(0);
 
-  const inicial      = usuario?.nombres?.charAt(0)?.toUpperCase() ?? 'U';
-  const esRepartidor = usuario?.rol === 'repartidor';
-  const esSupervisor = usuario?.rol === 'supervisor';
+  const inicial        = usuario?.nombres?.charAt(0)?.toUpperCase() ?? 'U';
+  const esRepartidor   = usuario?.rol === 'repartidor';
+  const esSupervisor   = usuario?.rol === 'supervisor';
+  const esAdmin        = usuario?.rol === 'administrador';
+  const mostrarStats   = !esSupervisor && !esAdmin;
 
   useFocusEffect(
     useCallback(() => {
+      if (!mostrarStats) return;
       const fetchStats = async () => {
         try {
           if (esRepartidor) {
             const { data } = await apiClient.get('/repartidor/pedidos');
-            const lista = Array.isArray(data) ? data : [];
-            setTotalEnvios(lista.length);
-            setEntregados(lista.filter((p: Record<string, unknown>) =>
-              (p.idEstadoPedido as number) === 5
-            ).length);
-          } else if (esSupervisor) {
-            const { data } = await apiClient.get('/supervisor/pedidos/en-reparto');
             const lista = Array.isArray(data) ? data : [];
             setTotalEnvios(lista.length);
             setEntregados(lista.filter((p: Record<string, unknown>) =>
@@ -62,7 +58,7 @@ export default function ProfileScreen() {
         }
       };
       fetchStats();
-    }, [usuario?.idUsuario, usuario?.rol]),
+    }, [usuario?.idUsuario, usuario?.rol, mostrarStats]),
   );
 
   const handleCerrarSesion = (): void => {
@@ -118,9 +114,7 @@ export default function ProfileScreen() {
     Alert.alert('Foto de perfil', 'Selecciona una opción', opciones);
   };
 
-  const statLabel1 = esRepartidor  ? 'ASIGNADOS'
-                   : esSupervisor  ? 'EN REPARTO'
-                   : 'ENVÍOS';
+  const statLabel1 = esRepartidor ? 'ASIGNADOS' : 'ENVÍOS';
 
   return (
     <View style={s.container}>
@@ -166,19 +160,21 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* STATS */}
-        <View style={s.statsRow}>
-          <View style={[s.statCard, s.statCardDark]}>
-            <Text style={s.statEmoji}>📦</Text>
-            <Text style={s.statValDark}>{totalEnvios}</Text>
-            <Text style={s.statLabelDark}>{statLabel1}</Text>
+        {/* STATS — solo para cliente y repartidor */}
+        {mostrarStats && (
+          <View style={s.statsRow}>
+            <View style={[s.statCard, s.statCardDark]}>
+              <Text style={s.statEmoji}>📦</Text>
+              <Text style={s.statValDark}>{totalEnvios}</Text>
+              <Text style={s.statLabelDark}>{statLabel1}</Text>
+            </View>
+            <View style={[s.statCard, s.statCardLight]}>
+              <Text style={s.statEmoji}>✅</Text>
+              <Text style={s.statValLight}>{entregados}</Text>
+              <Text style={s.statLabelLight}>ENTREGADOS</Text>
+            </View>
           </View>
-          <View style={[s.statCard, s.statCardLight]}>
-            <Text style={s.statEmoji}>✅</Text>
-            <Text style={s.statValLight}>{entregados}</Text>
-            <Text style={s.statLabelLight}>ENTREGADOS</Text>
-          </View>
-        </View>
+        )}
 
         {/* LOGOUT */}
         <TouchableOpacity style={s.logoutBtn} onPress={handleCerrarSesion} activeOpacity={0.85}>

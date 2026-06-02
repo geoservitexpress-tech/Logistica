@@ -10,46 +10,52 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { apiClient, ENDPOINTS } from '@/api';
+import { useAuth } from '@/context/AuthContext';
 import { COLORS } from '@/theme';
 import styles from './InsightsScreen.styles';
 
 interface InsightStats {
-  total:       number;
-  entregados:  number;
-  enCamino:    number;
-  pendientes:  number;
-  cancelados:  number;
-  tasaExito:   number;
+  total:        number;
+  entregados:   number;
+  enReparto:    number;
+  asignados:    number;
+  noEntregados: number;
+  cancelados:   number;
+  creados:      number;
+  tasaExito:    number;
 }
 
 export default function InsightsScreen() {
-  const [stats,      setStats]      = useState<InsightStats>({
-    total: 0, entregados: 0, enCamino: 0, pendientes: 0, cancelados: 0, tasaExito: 0,
+  const { usuario } = useAuth();
+  const [stats,       setStats]       = useState<InsightStats>({
+    total: 0, entregados: 0, enReparto: 0, asignados: 0,
+    noEntregados: 0, cancelados: 0, creados: 0, tasaExito: 0,
   });
-  const [cargando,   setCargando]   = useState<boolean>(false);
-  const [refrescando,setRefrescando]= useState<boolean>(false);
+  const [cargando,    setCargando]    = useState<boolean>(false);
+  const [refrescando, setRefrescando] = useState<boolean>(false);
 
   const fetchInsights = useCallback(async (esRefresh = false) => {
     if (esRefresh) setRefrescando(true);
     else setCargando(true);
     try {
-      const { data } = await apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL);
-      const lista = Array.isArray(data) ? data : [];
-      const entregados = lista.filter((p: Record<string, string>) =>
-        p.estadoPedido?.toLowerCase().includes('entregado')).length;
-      const s: InsightStats = {
-        total:      lista.length,
+      const [resTodos, resReparto] = await Promise.all([
+        apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL),
+        apiClient.get('/supervisor/pedidos/en-reparto'),
+      ]);
+      const lista    = Array.isArray(resTodos.data)   ? resTodos.data   : [];
+      const reparto  = Array.isArray(resReparto.data) ? resReparto.data : [];
+      const entregados = lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 5).length;
+
+      setStats({
+        total:        lista.length,
         entregados,
-        enCamino:   lista.filter((p: Record<string, string>) =>
-          p.estadoPedido?.toLowerCase().includes('camino')).length,
-        pendientes: lista.filter((p: Record<string, string>) =>
-          p.estadoPedido?.toLowerCase().includes('pendiente') ||
-          p.estadoPedido?.toLowerCase().includes('creado')).length,
-        cancelados: lista.filter((p: Record<string, string>) =>
-          p.estadoPedido?.toLowerCase().includes('cancelado')).length,
-        tasaExito:  lista.length > 0 ? Math.round((entregados / lista.length) * 100) : 0,
-      };
-      setStats(s);
+        enReparto:    reparto.length,
+        asignados:    lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 2).length,
+        noEntregados: lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 7).length,
+        cancelados:   lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 6).length,
+        creados:      lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 1).length,
+        tasaExito:    lista.length > 0 ? Math.round((entregados / lista.length) * 100) : 0,
+      });
     } catch (e) {
       console.log('Error insights', e);
     } finally {
@@ -60,12 +66,17 @@ export default function InsightsScreen() {
 
   useFocusEffect(useCallback(() => { fetchInsights(); }, [fetchInsights]));
 
+  const hora    = new Date().getHours();
+  const saludo  = hora < 12 ? 'Buenos días' : hora < 18 ? 'Buenas tardes' : 'Buenas noches';
+  const inicial = usuario?.nombres?.charAt(0)?.toUpperCase() ?? 'S';
+
   const metricCards = [
-    { label: 'Total Pedidos',  value: stats.total,      icon: '[P]', bg: '#0F2B46', text: '#fff' },
-    { label: 'Entregados',     value: stats.entregados, icon: '[OK]', bg: '#DCFCE7', text: '#16A34A' },
-    { label: 'En Camino',      value: stats.enCamino,   icon: '[C]',  bg: '#DBEAFE', text: '#2563EB' },
-    { label: 'Pendientes',     value: stats.pendientes, icon: '[W]',  bg: '#FEF3C7', text: '#D97706' },
-    { label: 'Cancelados',     value: stats.cancelados, icon: '[X]',  bg: '#FEE2E2', text: '#DC2626' },
+    { label: 'Total Pedidos',   value: stats.total,        icon: '📦', bg: '#0F2B46', text: '#fff'     },
+    { label: 'En Reparto',      value: stats.enReparto,    icon: '🚚', bg: '#DBEAFE', text: '#2563EB'  },
+    { label: 'Entregados',      value: stats.entregados,   icon: '✅', bg: '#DCFCE7', text: '#16A34A'  },
+    { label: 'Asignados',       value: stats.asignados,    icon: '📋', bg: '#FEF3C7', text: '#D97706'  },
+    { label: 'No Entregados',   value: stats.noEntregados, icon: '❌', bg: '#FEE2E2', text: '#DC2626'  },
+    { label: 'Cancelados',      value: stats.cancelados,   icon: '🚫', bg: '#FEE2E2', text: '#DC2626'  },
   ];
 
   return (
@@ -81,18 +92,42 @@ export default function InsightsScreen() {
         />
       }
     >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Insights</Text>
-        <Text style={styles.headerSubtitle}>Estadisticas de pedidos</Text>
+      {/* HEADER */}
+      <View style={{
+        flexDirection:  'row',
+        justifyContent: 'space-between',
+        alignItems:     'center',
+        marginBottom:   8,
+      }}>
+        <View>
+          <Text style={styles.headerTitle}>Estadísticas</Text>
+          <Text style={styles.headerSubtitle}>
+            {saludo}, {usuario?.nombres ?? 'Supervisor'} 👋
+          </Text>
+        </View>
+        <View style={{
+          width:           44,
+          height:          44,
+          borderRadius:    22,
+          backgroundColor: COLORS.primary,
+          alignItems:      'center',
+          justifyContent:  'center',
+        }}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>{inicial}</Text>
+        </View>
       </View>
+
+      <Text style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 20 }}>
+        {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+      </Text>
 
       {cargando ? (
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
       ) : (
         <>
-          {/* TASA DE EXITO */}
+          {/* TASA DE ÉXITO */}
           <View style={styles.tasaCard}>
-            <Text style={styles.tasaLabel}>Tasa de Exito</Text>
+            <Text style={styles.tasaLabel}>Tasa de Éxito</Text>
             <Text style={styles.tasaValue}>{stats.tasaExito}%</Text>
             <View style={styles.tasaBar}>
               <View style={[styles.tasaFill, { width: `${stats.tasaExito}%` as `${number}%` }]} />
@@ -102,7 +137,7 @@ export default function InsightsScreen() {
             </Text>
           </View>
 
-          {/* METRICAS */}
+          {/* MÉTRICAS */}
           <Text style={styles.sectionTitle}>Desglose por estado</Text>
           <View style={styles.metricsGrid}>
             {metricCards.map((card) => (
@@ -113,6 +148,29 @@ export default function InsightsScreen() {
               </View>
             ))}
           </View>
+
+          {/* PEDIDOS PENDIENTES */}
+          {stats.creados > 0 && (
+            <View style={{
+              backgroundColor: '#FEF3C7',
+              borderRadius:    12,
+              padding:         16,
+              marginTop:       16,
+              flexDirection:   'row',
+              alignItems:      'center',
+              gap:             12,
+            }}>
+              <Text style={{ fontSize: 24 }}>⚠️</Text>
+              <View>
+                <Text style={{ fontWeight: '700', color: '#92400E', fontSize: 14 }}>
+                  {stats.creados} pedido{stats.creados > 1 ? 's' : ''} sin asignar
+                </Text>
+                <Text style={{ color: '#B45309', fontSize: 12, marginTop: 2 }}>
+                  Esperando asignación de repartidor
+                </Text>
+              </View>
+            </View>
+          )}
         </>
       )}
 

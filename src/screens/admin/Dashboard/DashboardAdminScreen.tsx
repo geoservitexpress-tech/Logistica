@@ -25,7 +25,7 @@ interface KpiPagoPersonal {
 }
 
 interface KpiUtilidadBruta {
-  utilidad:        number;
+  utilidad:         number;
   margenPorcentaje: number;
 }
 
@@ -34,17 +34,20 @@ interface Transaccion {
   numGuia:       string;
   cliente:       string;
   valor:         number;
+  moneda:        string;
+  estadoFactura: string;
+  creadoEn:      string;
 }
 
 export default function DashboardAdminScreen() {
   const { usuario } = useAuth();
 
-  const [ingresos,       setIngresos]       = useState<KpiIngresosTotal | null>(null);
-  const [pagoPersonal,   setPagoPersonal]   = useState<KpiPagoPersonal | null>(null);
-  const [utilidad,       setUtilidad]       = useState<KpiUtilidadBruta | null>(null);
-  const [transacciones,  setTransacciones]  = useState<Transaccion[]>([]);
-  const [cargando,       setCargando]       = useState<boolean>(false);
-  const [refrescando,    setRefrescando]    = useState<boolean>(false);
+  const [ingresos,      setIngresos]      = useState<KpiIngresosTotal | null>(null);
+  const [pagoPersonal,  setPagoPersonal]  = useState<KpiPagoPersonal | null>(null);
+  const [utilidad,      setUtilidad]      = useState<KpiUtilidadBruta | null>(null);
+  const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
+  const [cargando,      setCargando]      = useState<boolean>(false);
+  const [refrescando,   setRefrescando]   = useState<boolean>(false);
 
   const fetchData = useCallback(async (esRefresh = false) => {
     if (esRefresh) setRefrescando(true);
@@ -166,22 +169,50 @@ export default function DashboardAdminScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.tableHeader}>
-            <Text style={styles.tableHeaderText}>Orden ID</Text>
-            <Text style={styles.tableHeaderText}>Cliente</Text>
-            <Text style={styles.tableHeaderText}>Valor</Text>
-          </View>
-
           {transacciones.length === 0 ? (
             <Text style={{ color: COLORS.textMuted, fontSize: 13, textAlign: 'center', paddingVertical: 16 }}>
               No hay transacciones
             </Text>
           ) : (
             transacciones.map((t, i) => (
-              <View key={i} style={styles.tableRow}>
-                <Text style={styles.tableCellBold}>{t.numGuia ?? t.numeroFactura}</Text>
-                <Text style={styles.tableCell}>{t.cliente}</Text>
-                <Text style={styles.tableCell}>${(t.valor ?? 0).toLocaleString('es-CO')}</Text>
+              <View key={i} style={{
+                paddingVertical:   12,
+                borderBottomWidth: i < transacciones.length - 1 ? 1 : 0,
+                borderBottomColor: COLORS.border,
+                gap:               4,
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.navy }}>
+                    {t.numGuia ?? t.numeroFactura}
+                  </Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#16A34A' }}>
+                    ${(t.valor ?? 0).toLocaleString('es-CO')} COP
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>
+                    👤 {t.cliente}
+                  </Text>
+                  <View style={{
+                    backgroundColor:   t.estadoFactura === 'Pagada' ? '#DCFCE7' : '#FEF3C7',
+                    paddingHorizontal: 8,
+                    paddingVertical:   2,
+                    borderRadius:      999,
+                  }}>
+                    <Text style={{
+                      fontSize:   10,
+                      fontWeight: '700',
+                      color:      t.estadoFactura === 'Pagada' ? '#16A34A' : '#D97706',
+                    }}>
+                      {t.estadoFactura}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                  📅 {new Date(t.creadoEn).toLocaleDateString('es-CO', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                  })}
+                </Text>
               </View>
             ))
           )}

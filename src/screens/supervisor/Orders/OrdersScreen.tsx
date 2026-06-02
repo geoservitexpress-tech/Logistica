@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { apiClient } from '@/api';
+import { apiClient, ENDPOINTS } from '@/api';
 import { COLORS } from '@/theme';
 import styles from './OrdersScreen.styles';
 import type { OrdersStackParamList } from '@/navigation/SupervisorNavigator';
@@ -32,18 +32,19 @@ interface Pedido {
   precio:             number | null;
 }
 
-type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'Cancelado';
+type Vista    = 'enReparto' | 'historial';
+type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'Cancelado' | 'No entregado';
 
-const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'Cancelado'];
+const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'Cancelado', 'No entregado'];
 
 const ESTADO_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  'creado':                     { bg: '#F3F4F6', text: '#6B7280', label: 'PENDING' },
-  'asignado':                   { bg: '#FEF3C7', text: '#D97706', label: 'PENDING' },
-  'recibido por el repartidor': { bg: '#DBEAFE', text: '#2563EB', label: 'IN TRANSIT' },
-  'en curso':                   { bg: '#DBEAFE', text: '#2563EB', label: 'IN TRANSIT' },
-  'entregado':                  { bg: '#DCFCE7', text: '#16A34A', label: 'DELIVERED' },
-  'cancelado':                  { bg: '#FEE2E2', text: '#DC2626', label: 'CANCELLED' },
-  'no entregado':               { bg: '#FEE2E2', text: '#DC2626', label: 'NOT DELIVERED' },
+  'creado':                     { bg: '#F3F4F6', text: '#6B7280', label: 'PENDIENTE' },
+  'asignado':                   { bg: '#FEF3C7', text: '#D97706', label: 'ASIGNADO' },
+  'recibido por el repartidor': { bg: '#DBEAFE', text: '#2563EB', label: 'EN TRÁNSITO' },
+  'en curso':                   { bg: '#DBEAFE', text: '#2563EB', label: 'EN CURSO' },
+  'entregado':                  { bg: '#DCFCE7', text: '#16A34A', label: 'ENTREGADO' },
+  'cancelado':                  { bg: '#FEE2E2', text: '#DC2626', label: 'CANCELADO' },
+  'no entregado':               { bg: '#FEE2E2', text: '#DC2626', label: 'NO ENTREGADO' },
 };
 
 function getEstadoConfig(estado: string) {
@@ -60,18 +61,24 @@ function getNombre(val: string | null | object): string {
 }
 
 export default function OrdersScreen({ navigation }: Props) {
-  const [pedidos,     setPedidos]     = useState<Pedido[]>([]);
-  const [cargando,    setCargando]    = useState<boolean>(false);
-  const [refrescando, setRefrescando] = useState<boolean>(false);
-  const [busqueda,    setBusqueda]    = useState<string>('');
-  const [filtro,      setFiltro]      = useState<FiltroEstado>('Todos');
+  const [pedidosReparto,   setPedidosReparto]   = useState<Pedido[]>([]);
+  const [pedidosHistorial, setPedidosHistorial] = useState<Pedido[]>([]);
+  const [cargando,         setCargando]         = useState<boolean>(false);
+  const [refrescando,      setRefrescando]      = useState<boolean>(false);
+  const [busqueda,         setBusqueda]         = useState<string>('');
+  const [filtro,           setFiltro]           = useState<FiltroEstado>('Todos');
+  const [vista,            setVista]            = useState<Vista>('enReparto');
 
   const fetchPedidos = useCallback(async (esRefresh = false) => {
     if (esRefresh) setRefrescando(true);
     else setCargando(true);
     try {
-      const { data } = await apiClient.get('/supervisor/pedidos/en-reparto');
-      setPedidos(Array.isArray(data) ? data : []);
+      const [resReparto, resHistorial] = await Promise.all([
+        apiClient.get('/supervisor/pedidos/en-reparto'),
+        apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL),
+      ]);
+      setPedidosReparto(Array.isArray(resReparto.data) ? resReparto.data : []);
+      setPedidosHistorial(Array.isArray(resHistorial.data) ? resHistorial.data : []);
     } catch (e) {
       console.log('Error pedidos supervisor', e);
     } finally {
@@ -82,7 +89,9 @@ export default function OrdersScreen({ navigation }: Props) {
 
   useFocusEffect(useCallback(() => { fetchPedidos(); }, [fetchPedidos]));
 
-  const filtrados = pedidos.filter((p) => {
+  const pedidosActivos = vista === 'enReparto' ? pedidosReparto : pedidosHistorial;
+
+  const filtrados = pedidosActivos.filter((p) => {
     const nombre = getNombre(p.destinatarioNombre);
     const matchBusqueda =
       p.numGuia.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -92,6 +101,68 @@ export default function OrdersScreen({ navigation }: Props) {
     return matchBusqueda && matchFiltro;
   });
 
+  const renderCard = (pedido: Pedido) => {
+    const cfg        = getEstadoConfig(pedido.estadoPedido ?? '');
+    const nombre     = getNombre(pedido.destinatarioNombre);
+    const repartidor = getNombre(pedido.usuarioRepartidor);
+    const inicial    = repartidor !== 'Sin asignar' ? repartidor.charAt(0).toUpperCase() : '?';
+
+    return (
+      <View key={pedido.idPedido} style={styles.orderCard}>
+        <View style={styles.orderTop}>
+          <View>
+            <Text style={styles.guiaLabel}>GUÍA</Text>
+            <Text style={styles.guiaNum}>{pedido.numGuia}</Text>
+          </View>
+          <View style={[styles.estadoBadge, { backgroundColor: cfg.bg }]}>
+            <Text style={[styles.estadoText, { color: cfg.text }]}>{cfg.label}</Text>
+          </View>
+        </View>
+
+        <View style={styles.clienteRow}>
+          <Text style={styles.clienteIcon}>👤</Text>
+          <Text style={styles.clienteNombre}>{nombre}</Text>
+        </View>
+        <Text style={styles.direccionText}>{pedido.direccion}</Text>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <View style={styles.repartidorRow}>
+            <View style={styles.repartidorAvatar}>
+              <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 12 }}>{inicial}</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>COURIER</Text>
+              <Text style={styles.repartidorNombre}>{repartidor}</Text>
+            </View>
+          </View>
+          {pedido.precio != null && (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>AMOUNT</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.navy }}>
+                ${pedido.precio.toLocaleString('es-CO')} COP
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.accionesRow}>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => navigation.navigate('EditOrder', {
+              idPedido: String(pedido.idPedido),
+              numGuia:  pedido.numGuia,
+            })}
+          >
+            <Text style={styles.editBtnText}>✏️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.moreBtn}>
+            <Text style={styles.moreBtnText}>⋮</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
 
@@ -100,9 +171,41 @@ export default function OrdersScreen({ navigation }: Props) {
         <View>
           <Text style={styles.headerTitle}>Order Management</Text>
           <Text style={styles.headerSubtitle}>
-            {pedidos.length} envios activos
+            {vista === 'enReparto'
+              ? `${pedidosReparto.length} envíos activos`
+              : `${pedidosHistorial.length} pedidos en total`}
           </Text>
         </View>
+      </View>
+
+      {/* TABS */}
+      <View style={{
+        flexDirection:     'row',
+        backgroundColor:   COLORS.white,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+      }}>
+        {(['enReparto', 'historial'] as Vista[]).map((v) => (
+          <TouchableOpacity
+            key={v}
+            onPress={() => { setVista(v); setFiltro('Todos'); }}
+            style={{
+              flex:            1,
+              paddingVertical: 14,
+              alignItems:      'center',
+              borderBottomWidth: vista === v ? 2 : 0,
+              borderBottomColor: COLORS.primary,
+            }}
+          >
+            <Text style={{
+              fontSize:   13,
+              fontWeight: '700',
+              color:      vista === v ? COLORS.primary : COLORS.textMuted,
+            }}>
+              {v === 'enReparto' ? '🚚 En Reparto' : '📋 Historial'}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* SEARCH */}
@@ -164,76 +267,7 @@ export default function OrdersScreen({ navigation }: Props) {
           </View>
         )}
 
-        {!cargando && filtrados.map((pedido) => {
-          const cfg         = getEstadoConfig(pedido.estadoPedido ?? '');
-          const nombre      = getNombre(pedido.destinatarioNombre);
-          const repartidor  = getNombre(pedido.usuarioRepartidor);
-          const inicial     = repartidor !== 'Sin asignar'
-            ? repartidor.charAt(0).toUpperCase()
-            : '?';
-
-          return (
-            <View key={pedido.idPedido} style={styles.orderCard}>
-
-              {/* TOP */}
-              <View style={styles.orderTop}>
-                <View>
-                  <Text style={styles.guiaLabel}>GUÍA</Text>
-                  <Text style={styles.guiaNum}>{pedido.numGuia}</Text>
-                </View>
-                <View style={[styles.estadoBadge, { backgroundColor: cfg.bg }]}>
-                  <Text style={[styles.estadoText, { color: cfg.text }]}>{cfg.label}</Text>
-                </View>
-              </View>
-
-              {/* CLIENTE */}
-              <View style={styles.clienteRow}>
-                <Text style={styles.clienteIcon}>👤</Text>
-                <Text style={styles.clienteNombre}>{nombre}</Text>
-              </View>
-              <Text style={styles.direccionText}>{pedido.direccion}</Text>
-
-              {/* REPARTIDOR + MONTO */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <View style={styles.repartidorRow}>
-                  <View style={styles.repartidorAvatar}>
-                    <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 12 }}>
-                      {inicial}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>COURIER</Text>
-                    <Text style={styles.repartidorNombre}>{repartidor}</Text>
-                  </View>
-                </View>
-                {pedido.precio != null && (
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '700' }}>AMOUNT</Text>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.navy }}>
-                      ${pedido.precio.toLocaleString('es-CO')} COP
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* ACCIONES */}
-              <View style={styles.accionesRow}>
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={() => navigation.navigate('EditOrder', {
-                    idPedido: String(pedido.idPedido),
-                    numGuia:  pedido.numGuia,
-                  })}
-                >
-                  <Text style={styles.editBtnText}>✏️</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.moreBtn}>
-                  <Text style={styles.moreBtnText}>⋮</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        })}
+        {!cargando && filtrados.map((pedido) => renderCard(pedido))}
 
         <View style={{ height: 100 }} />
       </ScrollView>

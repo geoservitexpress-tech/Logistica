@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   ListRenderItem,
+  TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import styles from './HistorialRepartidorScreen.styles';
@@ -15,19 +16,23 @@ import { apiClient } from '@/api';
 import { COLORS } from '@/theme';
 
 interface PedidoHistorial {
-  idPedido:             number;
-  numGuia:              string;
-  estadoPedido:         string;
-  destinatarioNombre:   string | null | object;
-  direccion:            string;
-  fechaEntrega:         string;
-  tipoOperacion:        string;
+  idPedido:           number;
+  idEstadoPedido:     number;
+  numGuia:            string;
+  estadoPedido:       string;
+  destinatarioNombre: string | null | object;
+  direccion:          string;
+  fechaEntrega:       string;
+  tipoOperacion:      string;
 }
 
+type FiltroTiempo = 'hoy' | 'semana' | 'todos';
+
 export default function HistorialRepartidorScreen() {
-  const [pedidos,     setPedidos]     = useState<PedidoHistorial[]>([]);
-  const [cargando,    setCargando]    = useState<boolean>(false);
-  const [refrescando, setRefrescando] = useState<boolean>(false);
+  const [pedidos,      setPedidos]      = useState<PedidoHistorial[]>([]);
+  const [cargando,     setCargando]     = useState<boolean>(false);
+  const [refrescando,  setRefrescando]  = useState<boolean>(false);
+  const [filtroTiempo, setFiltroTiempo] = useState<FiltroTiempo>('hoy');
 
   const cargarHistorial = async (esRefresco = false): Promise<void> => {
     if (esRefresco) setRefrescando(true);
@@ -35,8 +40,10 @@ export default function HistorialRepartidorScreen() {
     try {
       const { data } = await apiClient.get('/repartidor/pedidos');
       const lista = Array.isArray(data) ? data : [];
-      // Solo pedidos Entregados (5)
-      setPedidos(lista.filter((p: PedidoHistorial) => (p as unknown as Record<string, unknown>).idEstadoPedido === 5));
+      // Estados 5=Entregado y 7=No entregado
+      setPedidos(lista.filter((p: Record<string, unknown>) =>
+        p.idEstadoPedido === 5 || p.idEstadoPedido === 7
+      ));
     } catch (e) {
       console.log('ERROR cargando historial:', e);
     } finally {
@@ -45,28 +52,52 @@ export default function HistorialRepartidorScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      cargarHistorial();
-    }, []),
-  );
+  useFocusEffect(useCallback(() => { cargarHistorial(); }, []));
 
-  const renderItem: ListRenderItem<PedidoHistorial> = ({ item }) => (
-    <View style={styles.entregaCard}>
-      <View style={styles.cardInfo}>
-        <Text style={styles.horaText}>{item.numGuia}</Text>
-        <Text style={styles.clienteText}>
-          {typeof item.destinatarioNombre === 'string' ? item.destinatarioNombre : 'Sin destinatario'}
-        </Text>
-        <Text style={styles.metodoTag}>{item.direccion}</Text>
-        <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>{item.tipoOperacion}</Text>
+  const filtrarPorTiempo = (lista: PedidoHistorial[]): PedidoHistorial[] => {
+    const hoy    = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const semana = new Date(hoy);
+    semana.setDate(semana.getDate() - 7);
+
+    return lista.filter((p) => {
+      const fecha = new Date(p.fechaEntrega);
+      if (filtroTiempo === 'hoy')   return fecha >= hoy;
+      if (filtroTiempo === 'semana') return fecha >= semana;
+      return true;
+    });
+  };
+
+  const pedidosFiltrados = filtrarPorTiempo(pedidos);
+  const entregados       = pedidosFiltrados.filter((p) => p.idEstadoPedido === 5).length;
+  const noEntregados     = pedidosFiltrados.filter((p) => p.idEstadoPedido === 7).length;
+
+  const renderItem: ListRenderItem<PedidoHistorial> = ({ item }) => {
+    const esEntregado = item.idEstadoPedido === 5;
+    return (
+      <View style={styles.entregaCard}>
+        <View style={styles.cardInfo}>
+          <Text style={styles.horaText}>{item.numGuia}</Text>
+          <Text style={styles.clienteText}>
+            {typeof item.destinatarioNombre === 'string' ? item.destinatarioNombre : 'Sin destinatario'}
+          </Text>
+          <Text style={styles.metodoTag}>{item.direccion}</Text>
+          <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>
+            {item.tipoOperacion === 'RECOLECCION' ? '📦 Recoger' : '🚚 Entregar'}
+          </Text>
+        </View>
+        <View style={styles.cardMonto}>
+          <Text style={{ fontSize: 16 }}>{esEntregado ? '✅' : '❌'}</Text>
+          <Text style={[styles.montoText, {
+            fontSize: 12,
+            color:    esEntregado ? '#10B981' : '#EF4444',
+          }]}>
+            {esEntregado ? 'Entregado' : 'No entregado'}
+          </Text>
+        </View>
       </View>
-      <View style={styles.cardMonto}>
-        <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 16 }}>✓</Text>
-        <Text style={[styles.montoText, { fontSize: 12, color: '#10B981' }]}>Entregado</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   if (cargando) {
     return (
@@ -85,23 +116,54 @@ export default function HistorialRepartidorScreen() {
         </Text>
       </View>
 
-      <View style={styles.statsContainer}>
-        <View style={[styles.statBox, { backgroundColor: '#1E293B' }]}>
-          <Text style={styles.statLabel}>Entregados hoy</Text>
-          <Text style={styles.statValue}>{pedidos.length}</Text>
+      {/* FILTROS TIEMPO */}
+      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 12 }}>
+        {([
+          { key: 'hoy',    label: 'Hoy' },
+          { key: 'semana', label: 'Semana' },
+          { key: 'todos',  label: 'Histórico' },
+        ] as { key: FiltroTiempo; label: string }[]).map((f) => (
+          <TouchableOpacity
+            key={f.key}
+            onPress={() => setFiltroTiempo(f.key)}
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical:   8,
+              borderRadius:      999,
+              backgroundColor:   filtroTiempo === f.key ? '#0F2B46' : '#F1F5F9',
+            }}
+          >
+            <Text style={{
+              fontSize:   13,
+              fontWeight: '600',
+              color:      filtroTiempo === f.key ? '#fff' : '#64748B',
+            }}>
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* STATS */}
+      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 12 }}>
+        <View style={[styles.statBox, { flex: 1, backgroundColor: '#1E293B' }]}>
+          <Text style={styles.statLabel}>Entregados</Text>
+          <Text style={styles.statValue}>{entregados}</Text>
+        </View>
+        <View style={[styles.statBox, { flex: 1, backgroundColor: '#FEE2E2' }]}>
+          <Text style={[styles.statLabel, { color: '#DC2626' }]}>No entregados</Text>
+          <Text style={[styles.statValue, { color: '#DC2626' }]}>{noEntregados}</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Entregas Completadas</Text>
-
-      {pedidos.length === 0 ? (
+      {pedidosFiltrados.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <Text style={{ fontSize: 40, marginBottom: 12 }}>{'[P]'}</Text>
-          <Text style={{ color: '#64748B', fontSize: 15 }}>No hay entregas completadas aun</Text>
+          <Text style={{ fontSize: 40, marginBottom: 12 }}>📭</Text>
+          <Text style={{ color: '#64748B', fontSize: 15 }}>No hay pedidos en este periodo</Text>
         </View>
       ) : (
         <FlatList
-          data={pedidos}
+          data={pedidosFiltrados}
           renderItem={renderItem}
           keyExtractor={(item) => String(item.idPedido)}
           contentContainerStyle={{ paddingBottom: 100 }}

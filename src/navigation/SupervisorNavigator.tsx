@@ -6,19 +6,17 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from '@/theme';
 
-import DashboardScreen from '@/screens/supervisor/Dashboard/DashboardScreen';
-import OrdersScreen from '@/screens/supervisor/Orders/OrdersScreen';
+import OrdersScreen    from '@/screens/supervisor/Orders/OrdersScreen';
 import EditOrderScreen from '@/screens/supervisor/Orders/EditOrder/EditOrderScreen';
-import TeamScreen from '@/screens/supervisor/Team/TeamScreen';
-import InsightsScreen from '@/screens/supervisor/Insights/InsightsScreen';
-import ProfileScreen from '@/screens/client/screens/Profile/ProfileScreen';
+import TeamScreen      from '@/screens/supervisor/Team/TeamScreen';
+import InsightsScreen  from '@/screens/supervisor/Insights/InsightsScreen';
+import ProfileScreen   from '@/screens/client/screens/Profile/ProfileScreen';
 
 export type SupervisorTabParamList = {
-  Home:     undefined;
-  Orders:   undefined;
-  Team:     undefined;
-  Insights: undefined;
-  Perfil:   undefined;
+  Estadisticas: undefined;
+  Orders:       undefined;
+  Team:         undefined;
+  Perfil:       undefined;
 };
 
 export type OrdersStackParamList = {
@@ -42,48 +40,40 @@ export default function SupervisorNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown:            false,
+        headerShown:             false,
         tabBarActiveTintColor:   COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
-          height:        70,
-          paddingBottom: 12,
+          height:          70,
+          paddingBottom:   12,
           backgroundColor: COLORS.white,
-          borderTopWidth: 1,
-          borderTopColor: COLORS.border,
+          borderTopWidth:  1,
+          borderTopColor:  COLORS.border,
         },
       }}
     >
       <Tab.Screen
-        name="Home"
-        component={DashboardScreen as React.ComponentType}
+        name="Estadisticas"
+        component={InsightsScreen as React.ComponentType}
         options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>{'[H]'}</Text>,
+          tabBarLabel: 'Estadísticas',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📊</Text>,
         }}
       />
       <Tab.Screen
         name="Orders"
         component={OrdersStack}
         options={{
-          tabBarLabel: 'Orders',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>{'[O]'}</Text>,
+          tabBarLabel: 'Pedidos',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📋</Text>,
         }}
       />
       <Tab.Screen
         name="Team"
         component={TeamScreen as React.ComponentType}
         options={{
-          tabBarLabel: 'Team',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>{'[T]'}</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="Insights"
-        component={InsightsScreen as React.ComponentType}
-        options={{
-          tabBarLabel: 'Insights',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>{'[I]'}</Text>,
+          tabBarLabel: 'Equipo',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👥</Text>,
         }}
       />
       <Tab.Screen
@@ -91,7 +81,7 @@ export default function SupervisorNavigator() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Perfil',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>{'[U]'}</Text>,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👤</Text>,
         }}
       />
     </Tab.Navigator>

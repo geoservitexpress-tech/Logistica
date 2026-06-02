@@ -89,7 +89,6 @@ function mapEstadoPorId(idEstado: number, tipoOperacion: string): OrderEstado {
 }
 
 function mapBackendToOrder(item: Record<string, unknown>): Order {
-  console.log('ESTADO PEDIDO:', item.idEstadoPedido, item.estadoPedido);
   const idEstado     = (item.idEstadoPedido as number) ?? 0;
   const tipoOperacion = (item.tipoOperacion as string) ?? '';
   return {

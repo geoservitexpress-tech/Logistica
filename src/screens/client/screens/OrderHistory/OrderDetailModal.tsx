@@ -239,14 +239,13 @@ export default function OrderDetailModal({ visible, order, onClose }: OrderDetai
               {order.telefono && <Text style={styles.infoPhone}>{order.telefono}</Text>}
             </View>
 
-            {/* Pago */}
+            {/* Método de Recepción */}
             <View style={styles.infoCard}>
               <View style={styles.infoCardRow}>
-                <Text>💳</Text>
-                <Text style={styles.infoCardTitle}>Método de Pago</Text>
+                <Text>🚚</Text>
+                <Text style={styles.infoCardTitle}>Tipo de Recepción</Text>
               </View>
               <Text style={styles.paymentMethod}>{order.pago}</Text>
-              <Text style={styles.paymentStatus}>{order.estadoPago}</Text>
             </View>
 
             {/* Ruta */}

@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "LogisticaV2",
+    "name": "GeoServit Express",
     "slug": "logisticav2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icons/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./src/assets/icons/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F2B46"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -18,7 +19,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./src/assets/icons/icon.png",
+        "backgroundColor": "#0F2B46"
       },
       "package": "com.anonymous.logisticav2"
     },

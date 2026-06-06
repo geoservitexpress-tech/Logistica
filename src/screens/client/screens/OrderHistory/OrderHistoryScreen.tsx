@@ -108,6 +108,7 @@ function mapBackendToOrder(item: Record<string, unknown>): Order {
     fragil:        (item.fragil as boolean) ?? false,
     manifestObs:   (item.observacionesManifiesto as string) ?? undefined,
     fotos:         (item.fotosPaqueteUrls as string[]) ?? [],
+    observacionesEntrega: (item.observacionesEntrega as string) ?? undefined,
   };
 }
 

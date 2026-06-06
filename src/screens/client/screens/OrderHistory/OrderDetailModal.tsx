@@ -258,17 +258,30 @@ export default function OrderDetailModal({ visible, order, onClose }: OrderDetai
             </View>
 
             {/* Observaciones del manifiesto */}
-            {order.manifestObs && (
-              <View style={styles.infoCard}>
-                <View style={styles.infoCardRow}>
-                  <Text>📝</Text>
-                  <Text style={styles.infoCardTitle}>Observaciones</Text>
-                </View>
-                <Text style={{ fontSize: 14, color: COLORS.textPrimary, marginTop: 4 }}>
-                  {order.manifestObs}
-                </Text>
-              </View>
-            )}
+{order.manifestObs && (
+  <View style={styles.infoCard}>
+    <View style={styles.infoCardRow}>
+      <Text>📝</Text>
+      <Text style={styles.infoCardTitle}>Observaciones del envío</Text>
+    </View>
+    <Text style={{ fontSize: 14, color: COLORS.textPrimary, marginTop: 4 }}>
+      {order.manifestObs}
+    </Text>
+  </View>
+)}
+
+{/* Observaciones del repartidor */}
+{order.observacionesEntrega && (
+  <View style={styles.infoCard}>
+    <View style={styles.infoCardRow}>
+      <Text>🚚</Text>
+      <Text style={styles.infoCardTitle}>Observaciones del repartidor</Text>
+    </View>
+    <Text style={{ fontSize: 14, color: COLORS.textPrimary, marginTop: 4 }}>
+      {order.observacionesEntrega}
+    </Text>
+  </View>
+)}
 
             {/* Fotos si tiene */}
             {order.fotos && order.fotos.length > 0 && (

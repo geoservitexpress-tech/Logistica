@@ -20,7 +20,6 @@ interface InsightStats {
   enReparto:    number;
   asignados:    number;
   noEntregados: number;
-  cancelados:   number;
   creados:      number;
   tasaExito:    number;
 }
@@ -29,7 +28,7 @@ export default function InsightsScreen() {
   const { usuario } = useAuth();
   const [stats,       setStats]       = useState<InsightStats>({
     total: 0, entregados: 0, enReparto: 0, asignados: 0,
-    noEntregados: 0, cancelados: 0, creados: 0, tasaExito: 0,
+    noEntregados: 0, creados: 0, tasaExito: 0,
   });
   const [cargando,    setCargando]    = useState<boolean>(false);
   const [refrescando, setRefrescando] = useState<boolean>(false);
@@ -52,7 +51,6 @@ export default function InsightsScreen() {
         enReparto:    reparto.length,
         asignados:    lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 2).length,
         noEntregados: lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 7).length,
-        cancelados:   lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 6).length,
         creados:      lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 1).length,
         tasaExito:    lista.length > 0 ? Math.round((entregados / lista.length) * 100) : 0,
       });
@@ -76,7 +74,6 @@ export default function InsightsScreen() {
     { label: 'Entregados',      value: stats.entregados,   icon: '✅', bg: '#DCFCE7', text: '#16A34A'  },
     { label: 'Asignados',       value: stats.asignados,    icon: '📋', bg: '#FEF3C7', text: '#D97706'  },
     { label: 'No Entregados',   value: stats.noEntregados, icon: '❌', bg: '#FEE2E2', text: '#DC2626'  },
-    { label: 'Cancelados',      value: stats.cancelados,   icon: '🚫', bg: '#FEE2E2', text: '#DC2626'  },
   ];
 
   return (

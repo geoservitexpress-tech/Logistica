@@ -16,17 +16,23 @@ import { COLORS } from '@/theme';
 import styles from './DashboardAdminScreen.styles';
 
 interface KpiIngresosTotal {
-  total:               number;
+  valor:               number;
   variacionPorcentaje: number | null;
+  fechaDesde:          string;
+  fechaHasta:          string;
 }
 
 interface KpiPagoPersonal {
-  total: number;
+  valor:               number;
+  entregasCompletadas: number;
+  tarifaPorEntrega:    number;
 }
 
 interface KpiUtilidadBruta {
-  utilidad:         number;
+  valor:            number;
   margenPorcentaje: number;
+  ingresosTotales:  number;
+  pagoPersonal:     number;
 }
 
 interface Transaccion {
@@ -74,7 +80,7 @@ export default function DashboardAdminScreen() {
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
 
   const formatCOP = (val: number): string =>
-    `$${val.toLocaleString('es-CO')} COP`;
+    `$${Math.round(val).toLocaleString('es-CO')} COP`;
 
   const inicial = usuario?.nombres?.charAt(0)?.toUpperCase() ?? 'A';
 
@@ -109,9 +115,12 @@ export default function DashboardAdminScreen() {
         }
       >
         <Text style={styles.pageTitle}>Resumen Financiero</Text>
-        <Text style={styles.pageSubtitle}>
-          Control de ingresos y rentabilidad operativa en tiempo real.
-        </Text>
+        {ingresos && (
+          <Text style={styles.pageSubtitle}>
+            {new Date(ingresos.fechaDesde).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })} —{' '}
+            {new Date(ingresos.fechaHasta).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </Text>
+        )}
 
         {/* INGRESOS TOTALES */}
         <View style={styles.kpiCard}>
@@ -120,15 +129,19 @@ export default function DashboardAdminScreen() {
               <Text style={{ fontSize: 22 }}>💰</Text>
             </View>
             {ingresos?.variacionPorcentaje != null && (
-              <View style={[styles.kpiBadge, { backgroundColor: '#DCFCE7' }]}>
-                <Text style={[styles.kpiBadgeText, { color: '#16A34A' }]}>
-                  ↑ +{ingresos.variacionPorcentaje.toFixed(0)}%
+              <View style={[styles.kpiBadge, {
+                backgroundColor: ingresos.variacionPorcentaje >= 0 ? '#DCFCE7' : '#FEE2E2',
+              }]}>
+                <Text style={[styles.kpiBadgeText, {
+                  color: ingresos.variacionPorcentaje >= 0 ? '#16A34A' : '#DC2626',
+                }]}>
+                  {ingresos.variacionPorcentaje >= 0 ? '↑' : '↓'} {Math.abs(ingresos.variacionPorcentaje).toFixed(0)}% vs periodo anterior
                 </Text>
               </View>
             )}
           </View>
           <Text style={styles.kpiLabel}>Ingresos Totales</Text>
-          <Text style={styles.kpiValue}>{formatCOP(ingresos?.total ?? 0)}</Text>
+          <Text style={styles.kpiValue}>{formatCOP(ingresos?.valor ?? 0)}</Text>
         </View>
 
         {/* PAGO PERSONAL */}
@@ -137,9 +150,21 @@ export default function DashboardAdminScreen() {
             <View style={styles.kpiIconBox}>
               <Text style={{ fontSize: 22 }}>👥</Text>
             </View>
+            {pagoPersonal?.entregasCompletadas != null && (
+              <View style={[styles.kpiBadge, { backgroundColor: '#DBEAFE' }]}>
+                <Text style={[styles.kpiBadgeText, { color: '#2563EB' }]}>
+                  {pagoPersonal.entregasCompletadas} entregas
+                </Text>
+              </View>
+            )}
           </View>
           <Text style={styles.kpiLabel}>Pago Personal</Text>
-          <Text style={styles.kpiValue}>{formatCOP(pagoPersonal?.total ?? 0)}</Text>
+          <Text style={styles.kpiValue}>{formatCOP(pagoPersonal?.valor ?? 0)}</Text>
+          {pagoPersonal?.tarifaPorEntrega != null && (
+            <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
+              ${pagoPersonal.tarifaPorEntrega.toLocaleString('es-CO')} COP por entrega
+            </Text>
+          )}
         </View>
 
         {/* UTILIDAD BRUTA */}
@@ -157,7 +182,17 @@ export default function DashboardAdminScreen() {
             )}
           </View>
           <Text style={styles.kpiLabel}>Utilidad Bruta</Text>
-          <Text style={styles.kpiValue}>{formatCOP(utilidad?.utilidad ?? 0)}</Text>
+          <Text style={styles.kpiValue}>{formatCOP(utilidad?.valor ?? 0)}</Text>
+          {utilidad && (
+            <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                Ingresos: {formatCOP(utilidad.ingresosTotales)}
+              </Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                Personal: {formatCOP(utilidad.pagoPersonal)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* TRANSACCIONES RECIENTES */}
@@ -186,7 +221,7 @@ export default function DashboardAdminScreen() {
                     {t.numGuia ?? t.numeroFactura}
                   </Text>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: '#16A34A' }}>
-                    ${(t.valor ?? 0).toLocaleString('es-CO')} COP
+                    ${Math.round(t.valor ?? 0).toLocaleString('es-CO')} COP
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

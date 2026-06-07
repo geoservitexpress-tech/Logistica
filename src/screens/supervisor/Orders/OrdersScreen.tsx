@@ -155,9 +155,6 @@ export default function OrdersScreen({ navigation }: Props) {
           >
             <Text style={styles.editBtnText}>✏️</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.moreBtn}>
-            <Text style={styles.moreBtnText}>⋮</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );

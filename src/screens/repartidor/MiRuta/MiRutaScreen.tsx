@@ -242,6 +242,7 @@ export default function MiRutaScreen({ navigation }: Props) {
                       telefono:           pedido.telefono,
                       pagadoPorRemitente: pedido.pagadoPorRemitente,
                       precio:             pedido.precio,
+                      tipoOperacion:      pedido.tipoOperacion,
                     })
                   }
                 >

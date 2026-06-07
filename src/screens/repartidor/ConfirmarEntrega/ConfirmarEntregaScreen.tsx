@@ -21,11 +21,6 @@ import styles from './ConfirmarEntregaScreen.styles';
 
 type Props = NativeStackScreenProps<RutaStackParamList, 'ConfirmarEntrega'>;
 
-const RESULTADOS = [
-  { id: 1, label: 'Exitoso' },
-  { id: 3, label: 'No entregado' },
-];
-
 const METODOS_PAGO = [
   { id: 1, label: 'Efectivo' },
   { id: 2, label: 'Transferencia' },
@@ -37,11 +32,22 @@ const METODOS_PAGO = [
 ];
 
 export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
-  const { id, direccion, destinatario, telefono, pagadoPorRemitente, precio } = route.params;
+  const { id, direccion, destinatario, telefono, pagadoPorRemitente, precio, tipoOperacion } = route.params;
   const { completarPedido } = useRuta();
 
+  const esRecoleccion  = tipoOperacion === 'RECOLECCION';
   const yaEstaPagado   = pagadoPorRemitente === true;
   const valorACobrar   = precio ?? 0;
+
+  const RESULTADOS = esRecoleccion
+    ? [
+        { id: 1, label: 'Recogido exitosamente' },
+        { id: 3, label: 'No se pudo recoger' },
+      ]
+    : [
+        { id: 1, label: 'Exitoso' },
+        { id: 3, label: 'No entregado' },
+      ];
 
   const [observaciones, setObservaciones] = useState<string>('');
   const [idResultado,   setIdResultado]   = useState<number>(1);
@@ -67,13 +73,12 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
     const esNoEntrega = idResultado === 3 || idResultado === 4;
 
     if (!fotoUri && !esNoEntrega) {
-      Alert.alert('Foto requerida', 'Debes tomar una foto como evidencia de la entrega.');
+      Alert.alert('Foto requerida', 'Debes tomar una foto como evidencia.');
       return;
     }
 
     setEnviando(true);
     try {
-      // Intentar aceptar — ignorar 409 si ya está en curso
       try {
         await apiClient.post(`/repartidor/pedidos/${id}/aceptar`);
       } catch (e: unknown) {
@@ -107,15 +112,21 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
       completarPedido(id);
 
       Alert.alert(
-        esNoEntrega ? '❌ No entregado' : '✅ Entrega confirmada',
         esNoEntrega
-          ? 'Se registró que el pedido no pudo ser entregado.'
-          : `La entrega #${id} fue registrada correctamente.`,
+          ? (esRecoleccion ? '❌ No se pudo recoger' : '❌ No entregado')
+          : (esRecoleccion ? '✅ Recogida confirmada' : '✅ Entrega confirmada'),
+        esNoEntrega
+          ? (esRecoleccion
+              ? 'Se registró que no se pudo recoger el paquete.'
+              : 'Se registró que el pedido no pudo ser entregado.')
+          : (esRecoleccion
+              ? `La recogida #${id} fue registrada. El pedido pasará a entrega.`
+              : `La entrega #${id} fue registrada correctamente.`),
         [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: unknown } }; message?: string };
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al confirmar entrega';
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al confirmar';
       Alert.alert('Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setEnviando(false);
@@ -129,7 +140,9 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ fontSize: 22, color: '#0F172A' }}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirmar Entrega</Text>
+        <Text style={styles.headerTitle}>
+          {esRecoleccion ? 'Confirmar Recogida' : 'Confirmar Entrega'}
+        </Text>
         <View style={styles.headerSpace} />
       </View>
 
@@ -137,10 +150,14 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
 
         {/* INFO */}
         <View style={styles.card}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ORDEN #{id}</Text>
+          <View style={[styles.badge, { backgroundColor: esRecoleccion ? '#FEF3C7' : '#DBEAFE' }]}>
+            <Text style={[styles.badgeText, { color: esRecoleccion ? '#D97706' : '#2563EB' }]}>
+              {esRecoleccion ? '📦 RECOLECCIÓN' : '🚚 ENTREGA'} #{id}
+            </Text>
           </View>
-          <Text style={styles.title}>Confirmar Entrega</Text>
+          <Text style={styles.title}>
+            {esRecoleccion ? 'Confirmar Recogida' : 'Confirmar Entrega'}
+          </Text>
           <View style={styles.divider} />
           <Text style={styles.label}>DESTINATARIO</Text>
           <Text style={styles.value}>{destinatario ?? 'N/A'}</Text>
@@ -154,43 +171,44 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
           )}
         </View>
 
-        {/* ESTADO DE PAGO */}
-        <View style={[styles.card, {
-          backgroundColor: yaEstaPagado ? '#DCFCE7' : '#FEF3C7',
-          borderWidth:     1,
-          borderColor:     yaEstaPagado ? '#86EFAC' : '#FDE68A',
-        }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={{ fontSize: 32 }}>{yaEstaPagado ? '✅' : '💵'}</Text>
-            <View>
-              <Text style={{
-                fontSize:   15,
-                fontWeight: '800',
-                color:      yaEstaPagado ? '#15803D' : '#92400E',
-              }}>
-                {yaEstaPagado ? 'Este pedido ya está pagado' : 'Debes cobrar al entregar'}
-              </Text>
-              {!yaEstaPagado && valorACobrar > 0 && (
-                <Text style={{ fontSize: 18, fontWeight: '800', color: '#D97706', marginTop: 4 }}>
-                  ${valorACobrar.toLocaleString('es-CO')} COP
+        {/* ESTADO DE PAGO — solo para entregas */}
+        {!esRecoleccion && (
+          <View style={[styles.card, {
+            backgroundColor: yaEstaPagado ? '#DCFCE7' : '#FEF3C7',
+            borderWidth:     1,
+            borderColor:     yaEstaPagado ? '#86EFAC' : '#FDE68A',
+          }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ fontSize: 32 }}>{yaEstaPagado ? '✅' : '💵'}</Text>
+              <View>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: yaEstaPagado ? '#15803D' : '#92400E' }}>
+                  {yaEstaPagado ? 'Este pedido ya está pagado' : 'Debes cobrar al entregar'}
                 </Text>
-              )}
-              {yaEstaPagado && (
-                <Text style={{ fontSize: 13, color: '#15803D', marginTop: 2 }}>
-                  No es necesario cobrar nada al destinatario
-                </Text>
-              )}
+                {!yaEstaPagado && valorACobrar > 0 && (
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#D97706', marginTop: 4 }}>
+                    ${valorACobrar.toLocaleString('es-CO')} COP
+                  </Text>
+                )}
+                {yaEstaPagado && (
+                  <Text style={{ fontSize: 13, color: '#15803D', marginTop: 2 }}>
+                    No es necesario cobrar nada al destinatario
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* FOTO */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>
-            Foto de Entrega {idResultado !== 3 && idResultado !== 4 ? '*' : '(Opcional)'}
+            {esRecoleccion ? 'Foto del Paquete' : 'Foto de Entrega'}{' '}
+            {idResultado !== 3 && idResultado !== 4 ? '*' : '(Opcional)'}
           </Text>
           <Text style={styles.sectionDescription}>
-            Captura una evidencia visual de la entrega.
+            {esRecoleccion
+              ? 'Captura una foto del paquete que vas a recoger.'
+              : 'Captura una evidencia visual de la entrega.'}
           </Text>
           {fotoUri ? (
             <View>
@@ -218,8 +236,8 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
           )}
         </View>
 
-        {/* COBRO — solo si no está pagado */}
-        {!yaEstaPagado && (
+        {/* COBRO — solo si no está pagado y es entrega */}
+        {!esRecoleccion && !yaEstaPagado && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Método de Cobro</Text>
             <Text style={styles.label}>MÉTODO DE PAGO</Text>
@@ -236,11 +254,7 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
                       backgroundColor:   idMetodoPago === m.id ? '#0F2B46' : '#F1F5F9',
                     }}
                   >
-                    <Text style={{
-                      color:      idMetodoPago === m.id ? '#fff' : '#64748B',
-                      fontWeight: '600',
-                      fontSize:   13,
-                    }}>
+                    <Text style={{ color: idMetodoPago === m.id ? '#fff' : '#64748B', fontWeight: '600', fontSize: 13 }}>
                       {m.label}
                     </Text>
                   </TouchableOpacity>
@@ -261,7 +275,7 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
           <TextInput
             multiline
             numberOfLines={4}
-            placeholder="Agregar comentarios sobre la entrega..."
+            placeholder={esRecoleccion ? 'Estado del paquete, condiciones...' : 'Comentarios sobre la entrega...'}
             placeholderTextColor="#94A3B8"
             style={styles.textArea}
             value={observaciones}
@@ -271,7 +285,9 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
 
         {/* RESULTADO */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Resultado de Entrega</Text>
+          <Text style={styles.sectionTitle}>
+            {esRecoleccion ? 'Resultado de Recogida' : 'Resultado de Entrega'}
+          </Text>
           {RESULTADOS.map((r) => (
             <TouchableOpacity
               key={r.id}
@@ -299,7 +315,10 @@ export default function ConfirmarEntregaScreen({ navigation, route }: Props) {
           {enviando
             ? <ActivityIndicator color="#fff" />
             : <Text style={styles.confirmBtnText}>
-                {idResultado === 3 || idResultado === 4 ? 'Registrar No Entrega' : 'Confirmar Entrega'}
+                {idResultado === 3 || idResultado === 4
+                  ? (esRecoleccion ? 'Registrar No Recogido' : 'Registrar No Entrega')
+                  : (esRecoleccion ? 'Confirmar Recogida' : 'Confirmar Entrega')
+                }
               </Text>
           }
         </TouchableOpacity>

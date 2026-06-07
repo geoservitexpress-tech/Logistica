@@ -6,7 +6,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { COLORS } from '@/theme';
 import DashboardAdminScreen from '@/screens/admin/Dashboard/DashboardAdminScreen';
 import OperacionesScreen    from '@/screens/admin/Operaciones/OperacionesScreen';
-import RolesScreen          from '@/screens/admin/Roles/RolesScreen';
 import UsuariosScreen       from '@/screens/admin/Usuarios/UsuariosScreen';
 import ProfileScreen        from '@/screens/client/screens/Profile/ProfileScreen';
 
@@ -52,14 +51,7 @@ export default function AdminNavigator() {
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🚚</Text>,
         }}
       />
-      <Tab.Screen
-        name="Roles"
-        component={RolesScreen}
-        options={{
-          tabBarLabel: 'Roles',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🔑</Text>,
-        }}
-      />
+  
       <Tab.Screen
         name="Usuarios"
         component={UsuariosScreen}

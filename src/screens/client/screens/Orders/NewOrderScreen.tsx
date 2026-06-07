@@ -177,6 +177,8 @@ const StyledInput = ({ placeholder, value, onChangeText, keyboardType, multiline
     keyboardType={keyboardType ?? 'default'}
     multiline={multiline}
     textAlignVertical={multiline ? 'top' : 'center'}
+    autoCorrect={false}
+    autoCapitalize="none"
   />
 );
 
@@ -418,6 +420,14 @@ export default function NewOrderScreen({ navigation }: Props) {
     }
   };
 
+  // Preview de dirección
+  const previewDireccion = [
+    form.addressType,
+    form.addressName,
+    form.addressNum1 ? `# ${form.addressNum1}` : '',
+    form.addressNum2 ? `- ${form.addressNum2}` : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar barStyle="dark-content" />
@@ -472,20 +482,68 @@ export default function NewOrderScreen({ navigation }: Props) {
             </>
           )}
 
-          <InputLabel label="Tipo de Via y Direccion" required />
+          <InputLabel label="Dirección de Entrega" required />
+
+          {/* PREVIEW DIRECCIÓN */}
+          {previewDireccion.length > 2 && (
+            <View style={{
+              backgroundColor:   '#F0F9FF',
+              borderRadius:      8,
+              padding:           10,
+              marginBottom:      8,
+              borderWidth:       1,
+              borderColor:       '#BAE6FD',
+            }}>
+              <Text style={{ fontSize: 11, color: '#0369A1', fontWeight: '700' }}>DIRECCIÓN GENERADA:</Text>
+              <Text style={{ fontSize: 13, color: '#0F2B46', fontWeight: '600', marginTop: 2 }}>
+                {previewDireccion}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.row}>
-            <Dropdown value={form.addressType} onPress={() => setShowAddressMenu(true)} style={styles.dropdownSm} />
-            <StyledInput placeholder="Nombre/No. Via" value={form.addressName} onChangeText={update('addressName')} style={styles.inputFlex} />
+            <Dropdown
+              value={form.addressType}
+              onPress={() => setShowAddressMenu(true)}
+              style={styles.dropdownSm}
+            />
+            <StyledInput
+              placeholder="38B"
+              value={form.addressName}
+              onChangeText={update('addressName')}
+              style={styles.inputFlex}
+            />
           </View>
-          <View style={[styles.row, { marginTop: 8 }]}>
+          <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6, marginTop: 4 }}>
+            ↑ Número de vía antes del # (ej: 38B, 143, 7A)
+          </Text>
+
+          <View style={[styles.row, { marginTop: 4 }]}>
             <Text style={styles.hashSymbol}>#</Text>
-            <StyledInput value={form.addressNum1} onChangeText={update('addressNum1')} keyboardType="numeric" style={styles.inputNum} />
+            <StyledInput
+              placeholder="1"
+              value={form.addressNum1}
+              onChangeText={update('addressNum1')}
+              keyboardType="numeric"
+              style={styles.inputNum}
+            />
             <Text style={styles.separator}>-</Text>
-            <StyledInput value={form.addressNum2} onChangeText={update('addressNum2')} keyboardType="numeric" style={styles.inputNum} />
+            <StyledInput
+              placeholder="14"
+              value={form.addressNum2}
+              onChangeText={update('addressNum2')}
+              keyboardType="numeric"
+              style={styles.inputNum}
+            />
           </View>
 
           <InputLabel label="Observaciones de Direccion" />
-          <StyledInput placeholder="Apartamento, oficina, instrucciones..." value={form.addressObs} onChangeText={update('addressObs')} multiline />
+          <StyledInput
+            placeholder="Apartamento, piso, casa, instrucciones..."
+            value={form.addressObs}
+            onChangeText={update('addressObs')}
+            multiline
+          />
 
           <View style={styles.row}>
             <View style={styles.halfCol}>
@@ -495,7 +553,14 @@ export default function NewOrderScreen({ navigation }: Props) {
             <View style={[styles.halfCol, { marginLeft: 8 }]}>
               <InputLabel label="Peso (KG)" />
               <View style={styles.weightContainer}>
-                <TextInput style={styles.weightInput} value={form.weight} onChangeText={update('weight')} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={COLORS.textMuted} />
+                <TextInput
+                  style={styles.weightInput}
+                  value={form.weight}
+                  onChangeText={update('weight')}
+                  keyboardType="decimal-pad"
+                  placeholder="0.00"
+                  placeholderTextColor={COLORS.textMuted}
+                />
                 <Text style={styles.weightUnit}>KG</Text>
               </View>
             </View>
@@ -504,7 +569,14 @@ export default function NewOrderScreen({ navigation }: Props) {
           <InputLabel label="Valor Declarado" />
           <View style={styles.valueContainer}>
             <Text style={styles.currencySymbol}>$</Text>
-            <TextInput style={styles.valueInput} value={form.declaredValue} onChangeText={update('declaredValue')} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={COLORS.textMuted} />
+            <TextInput
+              style={styles.valueInput}
+              value={form.declaredValue}
+              onChangeText={update('declaredValue')}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              placeholderTextColor={COLORS.textMuted}
+            />
           </View>
         </SectionCard>
 
@@ -560,7 +632,6 @@ export default function NewOrderScreen({ navigation }: Props) {
             </TouchableOpacity>
           ))}
 
-          {/* MÉTODO DE PAGO — solo si ya está pagado */}
           {form.tipoPago === 'pagado' && (
             <View style={{ marginTop: 4 }}>
               <InputLabel label="¿Cómo fue pagado?" required />
@@ -591,7 +662,6 @@ export default function NewOrderScreen({ navigation }: Props) {
             </View>
           )}
 
-          {/* VALOR A COBRAR — solo si cobrar al entregar */}
           {form.tipoPago === 'cobrar_entrega' && (
             <View style={{ marginTop: 4 }}>
               <InputLabel label="Valor a cobrar al entregar" required />
@@ -627,7 +697,12 @@ export default function NewOrderScreen({ navigation }: Props) {
           </View>
 
           <InputLabel label="Observaciones" />
-          <StyledInput placeholder="Manipular con cuidado, llamar al recibir..." value={form.manifestObs} onChangeText={update('manifestObs')} multiline />
+          <StyledInput
+            placeholder="Manipular con cuidado, llamar al recibir..."
+            value={form.manifestObs}
+            onChangeText={update('manifestObs')}
+            multiline
+          />
 
           <InputLabel label="Fotos del Paquete (Opcional)" />
           <View style={styles.photoRow}>

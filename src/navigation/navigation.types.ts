@@ -26,10 +26,10 @@ export type PedidosStackParamList = {
 };
 
 export type RepartidorTabParamList = {
-  MiRuta:   undefined;
-  Pedidos:  undefined;
+  MiRuta:    undefined;
+  Pedidos:   undefined;
   Historial: undefined;
-  Perfil:   undefined;
+  Perfil:    undefined;
 };
 
 export type RecolectorTabParamList = {
@@ -47,9 +47,9 @@ export type SupervisorTabParamList = {
 };
 
 export type AdminTabParamList = {
-  Dashboard:    undefined;
-  Usuarios:     undefined;
-  Operaciones:  undefined;
+  Dashboard:     undefined;
+  Usuarios:      undefined;
+  Operaciones:   undefined;
   Configuracion: undefined;
 };
 
@@ -62,5 +62,6 @@ export type RutaStackParamList = {
     telefono?:           string;
     pagadoPorRemitente?: boolean;
     precio?:             number;
+    tipoOperacion?:      string;
   };
 };

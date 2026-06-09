@@ -68,7 +68,7 @@ export default function DashboardAdminScreen() {
       setIngresos(resIngresos.data);
       setPagoPersonal(resPago.data);
       setUtilidad(resUtilidad.data);
-      setTransacciones(Array.isArray(resTrans.data) ? resTrans.data : []);
+      setTransacciones(Array.isArray(resTrans.data) ? resTrans.data : Array.isArray(resTrans.data?.items) ? resTrans.data.items : []);
     } catch (e) {
       console.log('Error admin finanzas', e);
     } finally {

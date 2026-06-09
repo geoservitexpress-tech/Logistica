@@ -41,8 +41,8 @@ export default function InsightsScreen() {
         apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL),
         apiClient.get('/supervisor/pedidos/en-reparto'),
       ]);
-      const lista    = Array.isArray(resTodos.data)   ? resTodos.data   : [];
-      const reparto  = Array.isArray(resReparto.data) ? resReparto.data : [];
+      const lista   = Array.isArray(resTodos.data)   ? resTodos.data   : Array.isArray(resTodos.data?.items)   ? resTodos.data.items   : [];
+      const reparto = Array.isArray(resReparto.data) ? resReparto.data : Array.isArray(resReparto.data?.items) ? resReparto.data.items : [];
       const entregados = lista.filter((p: Record<string, unknown>) => p.idEstadoPedido === 5).length;
 
       setStats({

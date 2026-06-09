@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { apiClient } from '@/api';
 import { COLORS } from '@/theme';
 import styles from './UsuariosScreen.styles';
 
@@ -31,48 +32,69 @@ const COLORES_ROL: Record<string, { bg: string; text: string }> = {
 
 const COLORES_AVATAR = ['#E8712A', '#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#0F2B46'];
 
-interface UsuarioMock {
+interface Usuario {
   idUsuario: number;
   nombres:   string;
   apellidos: string;
   correo:    string;
-  rol:       string;
+  roles:     { idRol: number; nombre: string }[];
 }
-
-// Data de ejemplo — se conectará cuando haya endpoint
-const USUARIOS_MOCK: UsuarioMock[] = [
-  { idUsuario: 6, nombres: 'Juan',    apellidos: 'García',  correo: 'r@gmail.com',          rol: 'repartidor' },
-  { idUsuario: 5, nombres: 'Yolanda', apellidos: 'García',  correo: 'y@gmail.com',          rol: 'cliente' },
-  { idUsuario: 7, nombres: 'Super',   apellidos: 'Visor',   correo: 's@gmail.com',          rol: 'supervisor' },
-  { idUsuario: 8, nombres: 'Admin',   apellidos: 'Gomez',   correo: 'a@gmail.com',          rol: 'administrador' },
-];
 
 export default function UsuariosScreen() {
   const [busqueda,    setBusqueda]    = useState<string>('');
-  const [usuarios,    setUsuarios]    = useState<UsuarioMock[]>(USUARIOS_MOCK);
+  const [usuarios,    setUsuarios]    = useState<Usuario[]>([]);
   const [cargando,    setCargando]    = useState<boolean>(false);
+  const [refrescando, setRefrescando] = useState<boolean>(false);
+
+  const fetchUsuarios = useCallback(async (esRefresh = false) => {
+    if (esRefresh) setRefrescando(true);
+    else setCargando(true);
+    try {
+      const { data } = await apiClient.get('/admin/usuarios');
+      const lista = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+      // Excluir administradores
+      setUsuarios(lista.filter((u: Usuario) =>
+        !u.roles.some((r) => r.nombre.toLowerCase() === 'administrador')
+      ));
+    } catch (e) {
+      console.log('Error usuarios', e);
+    } finally {
+      setCargando(false);
+      setRefrescando(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { fetchUsuarios(); }, [fetchUsuarios]));
 
   const filtrados = usuarios.filter((u) =>
     `${u.nombres} ${u.apellidos}`.toLowerCase().includes(busqueda.toLowerCase()) ||
     u.correo.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
-  const cambiarRol = (usuario: UsuarioMock): void => {
+  const cambiarRol = (usuario: Usuario): void => {
+    const rolActual = usuario.roles[0]?.nombre ?? 'Sin rol';
     Alert.alert(
       `Cambiar rol`,
-      `Usuario: ${usuario.nombres} ${usuario.apellidos}\nRol actual: ${usuario.rol}`,
+      `Usuario: ${usuario.nombres} ${usuario.apellidos}\nRol actual: ${rolActual}`,
       [
         ...ROLES_DISPONIBLES.map((rol) => ({
           text: rol.nombre,
-          onPress: () => {
-            setUsuarios((prev) =>
-              prev.map((u) =>
-                u.idUsuario === usuario.idUsuario
-                  ? { ...u, rol: rol.nombre.toLowerCase() }
-                  : u,
-              ),
-            );
-            Alert.alert('✅ Rol actualizado', `${usuario.nombres} ahora es ${rol.nombre}`);
+          onPress: async () => {
+            try {
+              await apiClient.patch(`/admin/usuarios/${usuario.idUsuario}/roles`, {
+                idsRol: [rol.id],
+              });
+              setUsuarios((prev) =>
+                prev.map((u) =>
+                  u.idUsuario === usuario.idUsuario
+                    ? { ...u, roles: [{ idRol: rol.id, nombre: rol.nombre }] }
+                    : u,
+                ),
+              );
+              Alert.alert('✅ Rol actualizado', `${usuario.nombres} ahora es ${rol.nombre}`);
+            } catch (e) {
+              Alert.alert('Error', 'No se pudo cambiar el rol.');
+            }
           },
         })),
         { text: 'Cancelar', style: 'cancel' },
@@ -94,8 +116,13 @@ export default function UsuariosScreen() {
         <Text style={styles.headerTitle}>Usuarios</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refrescando} onRefresh={() => fetchUsuarios(true)} colors={[COLORS.primary]} />
+        }
+      >
         <Text style={styles.pageTitle}>Gestión de Usuarios</Text>
         <Text style={styles.pageSubtitle}>Administra los usuarios y sus roles en el sistema.</Text>
 
@@ -111,8 +138,9 @@ export default function UsuariosScreen() {
         </View>
 
         {filtrados.map((usuario, idx) => {
-          const cfg     = COLORES_ROL[usuario.rol] ?? { bg: '#F3F4F6', text: '#6B7280' };
-          const bgAvatar = COLORES_AVATAR[idx % COLORES_AVATAR.length];
+          const rolNombre = usuario.roles[0]?.nombre?.toLowerCase() ?? 'cliente';
+          const cfg       = COLORES_ROL[rolNombre] ?? { bg: '#F3F4F6', text: '#6B7280' };
+          const bgAvatar  = COLORES_AVATAR[idx % COLORES_AVATAR.length];
           return (
             <View key={usuario.idUsuario} style={styles.card}>
               <View style={styles.cardHeader}>
@@ -127,7 +155,7 @@ export default function UsuariosScreen() {
 
               <View style={[styles.rolBadge, { backgroundColor: cfg.bg }]}>
                 <Text style={[styles.rolText, { color: cfg.text }]}>
-                  {usuario.rol.toUpperCase()}
+                  {rolNombre.toUpperCase()}
                 </Text>
               </View>
 

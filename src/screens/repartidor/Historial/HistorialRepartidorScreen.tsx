@@ -40,8 +40,7 @@ export default function HistorialRepartidorScreen() {
     else setCargando(true);
     try {
       const { data } = await apiClient.get('/repartidor/pedidos');
-      const lista = Array.isArray(data) ? data : [];
-      setPedidos(lista.filter((p: Record<string, unknown>) =>
+      const lista = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];      setPedidos(lista.filter((p: Record<string, unknown>) =>
         p.idEstadoPedido === 5 || p.idEstadoPedido === 7
       ));
     } catch (e) {

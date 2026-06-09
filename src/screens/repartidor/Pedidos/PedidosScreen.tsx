@@ -117,8 +117,7 @@ export default function PedidosScreen() {
     else setCargando(true);
     try {
       const { data } = await apiClient.get('/repartidor/pedidos');
-      const lista = Array.isArray(data) ? data : [];
-      setPedidos(lista.filter((p: PedidoAPI) => p.idEstadoPedido === 2 || p.idEstadoPedido === 3));
+      const lista = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];      setPedidos(lista.filter((p: PedidoAPI) => p.idEstadoPedido === 2 || p.idEstadoPedido === 3));
     } catch (e) {
       console.log('ERROR cargando pedidos repartidor:', e);
     } finally {

@@ -53,7 +53,7 @@ export default function TeamScreen() {
     else setCargando(true);
     try {
       const { data } = await apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL);
-      const pedidos  = Array.isArray(data) ? data : [];
+      const pedidos = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
 
       const mapaReps = new Map<string, RepartidorStats>();
 

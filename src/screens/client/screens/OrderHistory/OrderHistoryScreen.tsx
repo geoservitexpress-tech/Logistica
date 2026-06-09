@@ -145,7 +145,10 @@ export default function OrderHistoryScreen({ navigation }: Props) {
       const { data } = await apiClient.get(url);
       const lista: Order[] = Array.isArray(data)
         ? data.map((item: Record<string, unknown>) => mapBackendToOrder(item))
-        : [];
+        : Array.isArray(data?.items)
+          ? data.items.map((item: Record<string, unknown>) => mapBackendToOrder(item))
+          : [];
+      console.log('PEDIDOS RECIBIDOS:', lista.length);
       setPedidos(lista);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };

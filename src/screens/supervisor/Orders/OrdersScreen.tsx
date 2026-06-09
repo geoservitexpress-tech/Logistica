@@ -77,8 +77,8 @@ export default function OrdersScreen({ navigation }: Props) {
         apiClient.get('/supervisor/pedidos/en-reparto'),
         apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL),
       ]);
-      setPedidosReparto(Array.isArray(resReparto.data) ? resReparto.data : []);
-      setPedidosHistorial(Array.isArray(resHistorial.data) ? resHistorial.data : []);
+      setPedidosReparto(Array.isArray(resReparto.data) ? resReparto.data : Array.isArray(resReparto.data?.items) ? resReparto.data.items : []);
+      setPedidosHistorial(Array.isArray(resHistorial.data) ? resHistorial.data : Array.isArray(resHistorial.data?.items) ? resHistorial.data.items : []);
     } catch (e) {
       console.log('Error pedidos supervisor', e);
     } finally {

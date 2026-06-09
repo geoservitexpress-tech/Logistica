@@ -48,8 +48,7 @@ export default function OperacionesScreen() {
     else setCargando(true);
     try {
       const { data } = await apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL);
-      const pedidos  = Array.isArray(data) ? data : [];
-
+      const pedidos = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
       // MENSAJEROS
       const mapaRep = new Map<string, RepartidorStats>();
       pedidos.forEach((p: Record<string, unknown>) => {

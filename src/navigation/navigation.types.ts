@@ -1,5 +1,3 @@
-// src/navigation/navigation.types.ts
-
 export type RootStackParamList = {
   Auth:          undefined;
   ClientApp:     undefined;
@@ -22,7 +20,32 @@ export type ClientTabParamList = {
 
 export type PedidosStackParamList = {
   NuevoPedido:       undefined;
-  SolicitarRecogida: undefined;
+  SolicitarRecogida: {
+    destinoEntrega: {
+      nombreDestinatario:      string;
+      telefonoDestinatario:    string;
+      tipoViaNombre:           string;
+      nombreVia:               string;
+      numeroPlaca:             string;
+      numeroSecundario:        string;
+      idCiudad:                number;
+      idDepartamento:          number;
+      idPais:                  number;
+      observacionesDireccion?: string;
+    };
+    pedidoBase: {
+      idTipoPedido:             number;
+      fechaEntrega:             string;
+      tipoProductoNombre:       string;
+      pesoKg:                   number;
+      valorDeclarado:           number;
+      fragil:                   boolean;
+      observacionesManifiesto?: string;
+      pagadoPorRemitente:       boolean;
+      precio?:                  number;
+      idMetodoPago?:            number;
+    };
+  };
 };
 
 export type RepartidorTabParamList = {

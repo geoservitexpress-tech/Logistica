@@ -1,5 +1,6 @@
 export const API_CONFIG = {
-  BASE_URL: 'https://backlogistica-production-c7a3.up.railway.app',
+  //BASE_URL: 'https://backlogistica-production-c7a3.up.railway.app',
+  BASE_URL: 'http://192.168.1.84:3000',
   TIMEOUT: 60000,
 };
 

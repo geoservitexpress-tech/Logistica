@@ -100,12 +100,8 @@ const CatalogoMenu = ({ visible, title, items, onSelect, onClose }: CatalogoMenu
       <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1} />
       <View style={{ backgroundColor: COLORS.white, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: 400 }}>
         <Text style={{
-          fontSize: 14,
-          fontWeight: '700',
-          color: COLORS.textPrimary,
-          padding: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.border,
+          fontSize: 14, fontWeight: '700', color: COLORS.textPrimary,
+          padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border,
         }}>
           {title}
         </Text>
@@ -127,8 +123,9 @@ const CatalogoMenu = ({ visible, title, items, onSelect, onClose }: CatalogoMenu
   </RNModal>
 );
 
-export default function RequestPickupScreen({ navigation }: Props) {
+export default function RequestPickupScreen({ navigation, route }: Props) {
   const { usuario } = useAuth();
+  const { destinoEntrega, pedidoBase } = route.params;
 
   const [form, setForm]         = useState<FormState>(FORM_INICIAL);
   const [enviando, setEnviando] = useState<boolean>(false);
@@ -164,6 +161,8 @@ export default function RequestPickupScreen({ navigation }: Props) {
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (): Promise<void> => {
+
+    
     if (!form.companyName || !form.phone) {
       Alert.alert('Campos requeridos', 'Completa nombre de empresa y telefono.');
       return;
@@ -183,28 +182,21 @@ export default function RequestPickupScreen({ navigation }: Props) {
 
     try {
       const body = {
-  idTipoPedido:            1,
-  fechaEntrega:            (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  })(),
-  idMetodoRecepcion:       1,
-  nombreDestinatario:      form.companyName,
-  telefonoDestinatario:    form.phone,
-  tipoViaNombre:           form.tipoVia,
-  nombreVia:               form.addressName,
-  numeroPlaca:             form.num1,
-  numeroSecundario:        form.num2,
-  idCiudad:                parseInt(form.idCiudad),
-  idDepartamento:          parseInt(form.idDepartamento),
-  idPais:                  parseInt(form.idPais),
-  observacionesDireccion:  form.addressObs || undefined,
-  tipoProductoNombre:      'Recogida',
-  pesoKg:                  0,
-  valorDeclarado:          0,
-  fragil:                  false,
-};
+        ...pedidoBase,
+        idMetodoRecepcion:       1,
+        nombreDestinatario:      form.companyName,
+        telefonoDestinatario:    form.phone,
+        tipoViaNombre:           form.tipoVia,
+        nombreVia:               form.addressName,
+        numeroPlaca:             form.num1,
+        numeroSecundario:        form.num2,
+        idCiudad:                parseInt(form.idCiudad),
+        idDepartamento:          parseInt(form.idDepartamento),
+        idPais:                  parseInt(form.idPais),
+        observacionesDireccion:  form.addressObs || undefined,
+        destinoEntrega,
+      };
+
 
       await apiClient.post(ENDPOINTS.PEDIDOS.CREATE, body);
 
@@ -248,7 +240,6 @@ export default function RequestPickupScreen({ navigation }: Props) {
           Complete los datos de origen para programar la recoleccion de su mercancia.
         </Text>
 
-        {/* Empresa */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.iconContainer}>
@@ -277,7 +268,6 @@ export default function RequestPickupScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* Direccion */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={[styles.iconContainer, { backgroundColor: '#FEF3C7' }]}>
@@ -350,7 +340,6 @@ export default function RequestPickupScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* Botones */}
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -368,7 +357,6 @@ export default function RequestPickupScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* Banner */}
         <View style={styles.expressBanner}>
           <Text style={styles.expressTitle}>Servicio Express</Text>
           <Text style={styles.expressDesc}>

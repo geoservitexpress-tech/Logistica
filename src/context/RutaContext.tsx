@@ -62,7 +62,7 @@ export function RutaProvider({ children }: { children: ReactNode }) {
     setCargando(true);
     try {
       const { data } = await apiClient.get('/repartidor/pedidos');
-      const lista = Array.isArray(data) ? data : [];
+      const lista = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
       const activos = lista.filter((p: Record<string, unknown>) =>
         p.idEstadoPedido === 3 || p.idEstadoPedido === 4,
       );

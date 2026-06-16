@@ -420,7 +420,6 @@ export default function NewOrderScreen({ navigation }: Props) {
     }
   };
 
-  // Preview de dirección
   const previewDireccion = [
     form.addressType,
     form.addressName,
@@ -484,15 +483,14 @@ export default function NewOrderScreen({ navigation }: Props) {
 
           <InputLabel label="Dirección de Entrega" required />
 
-          {/* PREVIEW DIRECCIÓN */}
           {previewDireccion.length > 2 && (
             <View style={{
-              backgroundColor:   '#F0F9FF',
-              borderRadius:      8,
-              padding:           10,
-              marginBottom:      8,
-              borderWidth:       1,
-              borderColor:       '#BAE6FD',
+              backgroundColor: '#F0F9FF',
+              borderRadius:    8,
+              padding:         10,
+              marginBottom:    8,
+              borderWidth:     1,
+              borderColor:     '#BAE6FD',
             }}>
               <Text style={{ fontSize: 11, color: '#0369A1', fontWeight: '700' }}>DIRECCIÓN GENERADA:</Text>
               <Text style={{ fontSize: 13, color: '#0F2B46', fontWeight: '600', marginTop: 2 }}>
@@ -502,17 +500,8 @@ export default function NewOrderScreen({ navigation }: Props) {
           )}
 
           <View style={styles.row}>
-            <Dropdown
-              value={form.addressType}
-              onPress={() => setShowAddressMenu(true)}
-              style={styles.dropdownSm}
-            />
-            <StyledInput
-              placeholder="38B"
-              value={form.addressName}
-              onChangeText={update('addressName')}
-              style={styles.inputFlex}
-            />
+            <Dropdown value={form.addressType} onPress={() => setShowAddressMenu(true)} style={styles.dropdownSm} />
+            <StyledInput placeholder="38B" value={form.addressName} onChangeText={update('addressName')} style={styles.inputFlex} />
           </View>
           <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6, marginTop: 4 }}>
             ↑ Número de vía antes del # (ej: 38B, 143, 7A)
@@ -520,30 +509,13 @@ export default function NewOrderScreen({ navigation }: Props) {
 
           <View style={[styles.row, { marginTop: 4 }]}>
             <Text style={styles.hashSymbol}>#</Text>
-            <StyledInput
-              placeholder="1"
-              value={form.addressNum1}
-              onChangeText={update('addressNum1')}
-              keyboardType="numeric"
-              style={styles.inputNum}
-            />
+            <StyledInput placeholder="1" value={form.addressNum1} onChangeText={update('addressNum1')} keyboardType="numeric" style={styles.inputNum} />
             <Text style={styles.separator}>-</Text>
-            <StyledInput
-              placeholder="14"
-              value={form.addressNum2}
-              onChangeText={update('addressNum2')}
-              keyboardType="numeric"
-              style={styles.inputNum}
-            />
+            <StyledInput placeholder="14" value={form.addressNum2} onChangeText={update('addressNum2')} keyboardType="numeric" style={styles.inputNum} />
           </View>
 
           <InputLabel label="Observaciones de Direccion" />
-          <StyledInput
-            placeholder="Apartamento, piso, casa, instrucciones..."
-            value={form.addressObs}
-            onChangeText={update('addressObs')}
-            multiline
-          />
+          <StyledInput placeholder="Apartamento, piso, casa, instrucciones..." value={form.addressObs} onChangeText={update('addressObs')} multiline />
 
           <View style={styles.row}>
             <View style={styles.halfCol}>
@@ -580,7 +552,6 @@ export default function NewOrderScreen({ navigation }: Props) {
           </View>
         </SectionCard>
 
-        {/* SECCION PAGO */}
         <SectionCard icon="💳" title="Estado del Pago">
           <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 12 }}>
             ¿El producto ya está pagado o hay que cobrar al entregar?
@@ -604,11 +575,7 @@ export default function NewOrderScreen({ navigation }: Props) {
             >
               <Text style={{ fontSize: 24 }}>{op.icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{
-                  fontSize:   14,
-                  fontWeight: '700',
-                  color:      form.tipoPago === op.key ? COLORS.primary : COLORS.textPrimary,
-                }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: form.tipoPago === op.key ? COLORS.primary : COLORS.textPrimary }}>
                   {op.label}
                 </Text>
                 <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
@@ -616,14 +583,10 @@ export default function NewOrderScreen({ navigation }: Props) {
                 </Text>
               </View>
               <View style={{
-                width:           22,
-                height:          22,
-                borderRadius:    11,
-                borderWidth:     2,
-                borderColor:     form.tipoPago === op.key ? COLORS.primary : COLORS.border,
+                width: 22, height: 22, borderRadius: 11, borderWidth: 2,
+                borderColor: form.tipoPago === op.key ? COLORS.primary : COLORS.border,
                 backgroundColor: form.tipoPago === op.key ? COLORS.primary : 'transparent',
-                alignItems:      'center',
-                justifyContent:  'center',
+                alignItems: 'center', justifyContent: 'center',
               }}>
                 {form.tipoPago === op.key && (
                   <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>
@@ -642,17 +605,11 @@ export default function NewOrderScreen({ navigation }: Props) {
                       key={m.id}
                       onPress={() => setForm(p => ({ ...p, idMetodoPago: m.id }))}
                       style={{
-                        paddingHorizontal: 14,
-                        paddingVertical:   8,
-                        borderRadius:      999,
-                        backgroundColor:   form.idMetodoPago === m.id ? COLORS.primary : '#F1F5F9',
+                        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+                        backgroundColor: form.idMetodoPago === m.id ? COLORS.primary : '#F1F5F9',
                       }}
                     >
-                      <Text style={{
-                        color:      form.idMetodoPago === m.id ? '#fff' : '#64748B',
-                        fontWeight: '600',
-                        fontSize:   13,
-                      }}>
+                      <Text style={{ color: form.idMetodoPago === m.id ? '#fff' : '#64748B', fontWeight: '600', fontSize: 13 }}>
                         {m.label}
                       </Text>
                     </TouchableOpacity>
@@ -751,12 +708,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         title="Seleccionar Pais"
         items={paises}
         onSelect={(item) => {
-          setForm(p => ({
-            ...p,
-            idPais: item.id, nombrePais: item.nombre,
-            idDepartamento: '', nombreDepartamento: '',
-            idCiudad: '', nombreCiudad: '',
-          }));
+          setForm(p => ({ ...p, idPais: item.id, nombrePais: item.nombre, idDepartamento: '', nombreDepartamento: '', idCiudad: '', nombreCiudad: '' }));
         }}
         onClose={() => setShowPaisMenu(false)}
       />
@@ -765,11 +717,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         title="Seleccionar Departamento"
         items={departamentos}
         onSelect={(item) => {
-          setForm(p => ({
-            ...p,
-            idDepartamento: item.id, nombreDepartamento: item.nombre,
-            idCiudad: '', nombreCiudad: '',
-          }));
+          setForm(p => ({ ...p, idDepartamento: item.id, nombreDepartamento: item.nombre, idCiudad: '', nombreCiudad: '' }));
         }}
         onClose={() => setShowDeptoMenu(false)}
       />
@@ -788,8 +736,36 @@ export default function NewOrderScreen({ navigation }: Props) {
         onClose={() => setShowDeliveryModal(false)}
         onPickup={() => {
           setShowDeliveryModal(false);
+          const manana = new Date();
+          manana.setDate(manana.getDate() + 1);
+
+          navigation.navigate('SolicitarRecogida', {
+            destinoEntrega: {
+              nombreDestinatario:      form.recipientName,
+              telefonoDestinatario:    form.recipientPhone,
+              tipoViaNombre:           form.addressType,
+              nombreVia:               form.addressName,
+              numeroPlaca:             form.addressNum1,
+              numeroSecundario:        form.addressNum2,
+              idCiudad:                parseInt(form.idCiudad),
+              idDepartamento:          parseInt(form.idDepartamento),
+              idPais:                  parseInt(form.idPais),
+              observacionesDireccion:  form.addressObs || undefined,
+            },
+            pedidoBase: {
+              idTipoPedido:            1,
+              fechaEntrega:            manana.toISOString().slice(0, 10),
+              tipoProductoNombre:      form.productType,
+              pesoKg:                  parseFloat(form.weight) || 0,
+              valorDeclarado:          parseFloat(form.declaredValue) || 0,
+              fragil:                  form.fragile,
+              observacionesManifiesto: form.manifestObs || undefined,
+              pagadoPorRemitente:      form.tipoPago === 'pagado',
+              ...(form.tipoPago === 'cobrar_entrega' && { precio: parseFloat(form.valorCobrar) || 0 }),
+              ...(form.tipoPago === 'pagado' && { idMetodoPago: form.idMetodoPago }),
+            },
+          });
           resetForm();
-          navigation.navigate('SolicitarRecogida');
         }}
         onPhysicalPoint={() => {
           setShowDeliveryModal(false);

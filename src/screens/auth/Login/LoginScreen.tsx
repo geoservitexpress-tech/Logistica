@@ -57,7 +57,7 @@ export default function LoginScreen({ navigation }: Props) {
               elevation:       8,
             }}>
               <Image
-                source={require('@/assets/images/Logo.png')}
+                source={require('@/assets/images/geoservit-logo.png')}
                 style={{ width: 100, height: 100, resizeMode: 'contain' }}
               />
             </View>

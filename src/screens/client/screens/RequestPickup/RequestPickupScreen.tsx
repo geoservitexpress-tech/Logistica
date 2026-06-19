@@ -19,6 +19,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { COLORS } from '@/theme';
 import { useAuth } from '@/context/AuthContext';
 import styles from './RequestPickupScreen.styles';
+import GuiaModal from '@/components/modals/GuiaModal';
+import type { Order } from '@/types/pedido.types';
 import type { PedidosStackParamList } from '@/navigation/navigation.types';
 import { apiClient, ENDPOINTS } from '@/api';
 
@@ -139,6 +141,9 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
   const [showDeptoMenu,  setShowDeptoMenu]  = useState<boolean>(false);
   const [showCiudadMenu, setShowCiudadMenu] = useState<boolean>(false);
 
+  const [showGuiaModal, setShowGuiaModal] = useState<boolean>(false);
+  const [pedidoCreado,  setPedidoCreado]  = useState<Order | null>(null);
+
   useEffect(() => {
     async function cargarCatalogos() {
       try {
@@ -161,8 +166,6 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (): Promise<void> => {
-
-    
     if (!form.companyName || !form.phone) {
       Alert.alert('Campos requeridos', 'Completa nombre de empresa y telefono.');
       return;
@@ -175,8 +178,6 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
       Alert.alert('Campos requeridos', 'Completa la direccion de recogida.');
       return;
     }
-
-    
 
     setEnviando(true);
 
@@ -197,14 +198,37 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
         destinoEntrega,
       };
 
+      const { data } = await apiClient.post(ENDPOINTS.PEDIDOS.CREATE, body);
 
-      await apiClient.post(ENDPOINTS.PEDIDOS.CREATE, body);
+      // Direccion de recogida (origen) en texto
+      const direccionRecogida = [
+        form.tipoVia,
+        form.addressName,
+        `# ${form.num1}-${form.num2}`,
+        form.addressObs,
+      ].filter(Boolean).join(' ');
 
-      Alert.alert(
-        'Recogida Solicitada',
-        'Un recolector sera asignado pronto.',
-        [{ text: 'OK', onPress: () => navigation.getParent()?.navigate('Historial') }],
-      );
+      const nuevo: Order = {
+        id:            data.numGuia ?? `GL-${Date.now()}`,
+        estado:        'pendiente',
+        fecha:         new Date().toLocaleDateString('es-CO'),
+        // El destinatario final viene del destino de entrega
+        destinatario:  destinoEntrega.nombreDestinatario,
+        telefono:      destinoEntrega.telefonoDestinatario,
+        destino:       direccionRecogida,
+        origen:        form.nombreCiudad,
+        pago:          '',
+        fotos:         [],
+        fragil:        pedidoBase.fragil,
+        manifestObs:   pedidoBase.observacionesManifiesto,
+        companyName:   form.companyName,
+        weight:        String(pedidoBase.pesoKg ?? 0),
+        declaredValue: String(pedidoBase.valorDeclarado ?? 0),
+        metodoEntrega: 'RECOGIDA',
+      };
+
+      setPedidoCreado(nuevo);
+      setShowGuiaModal(true);
 
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: unknown } }; message?: string };
@@ -434,6 +458,16 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
           setForm(p => ({ ...p, tipoVia: item.nombre }));
         }}
         onClose={() => setShowViaMenu(false)}
+      />
+
+      <GuiaModal
+        visible={showGuiaModal}
+        pedido={pedidoCreado}
+        onCerrar={() => setShowGuiaModal(false)}
+        onConfirmar={() => {
+          setShowGuiaModal(false);
+          navigation.getParent()?.navigate('Historial');
+        }}
       />
     </KeyboardAvoidingView>
   );

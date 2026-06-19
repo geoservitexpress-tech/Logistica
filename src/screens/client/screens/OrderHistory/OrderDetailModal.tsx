@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { View, Text, TouchableOpacity, Modal as RNModal, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Modal as RNModal, ScrollView, Alert, Image, Linking } from 'react-native';
 import { COLORS } from '@/theme';
 import styles from './OrderDetailModal.styles';
 import * as Print from 'expo-print';
@@ -18,6 +18,7 @@ export interface Order {
   destino:              string;
   companyName?:         string;
   mensajero?:           string;
+  mensajeroTelefono?:   string;
   pago?:                string;
   estadoPago?:          string;
   metodoEntrega?:       string;
@@ -221,7 +222,13 @@ export default function OrderDetailModal({ visible, order, onClose }: OrderDetai
                   </View>
                   <TouchableOpacity
                     style={styles.callBtn}
-                    onPress={() => Alert.alert('Llamar', `Llamando a ${order.mensajero}...`)}
+                    onPress={() => {
+                      if (order.mensajeroTelefono) {
+                        Linking.openURL(`tel:${order.mensajeroTelefono}`);
+                      } else {
+                        Alert.alert('Sin teléfono', 'No hay número de contacto del mensajero.');
+                      }
+                    }}
                   >
                     <Text>📞</Text>
                   </TouchableOpacity>

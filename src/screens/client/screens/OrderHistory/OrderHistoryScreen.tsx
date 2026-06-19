@@ -24,6 +24,8 @@ import { apiClient, ENDPOINTS } from '@/api';
 
 type Props = BottomTabScreenProps<ClientTabParamList, 'Historial'>;
 
+type FiltroFecha = 'todos' | 'hoy' | 'semana' | 'mes' | 'custom';
+
 interface StatusConfig {
   label: string;
   bg:    string;
@@ -88,7 +90,8 @@ function mapEstadoPorId(idEstado: number, tipoOperacion: string): OrderEstado {
   }
 }
 
-function mapBackendToOrder(item: Record<string, unknown>): Order {
+// Guarda la fecha cruda (ISO) para poder filtrar
+function mapBackendToOrder(item: Record<string, unknown>): Order & { _fechaRaw?: string } {
   const idEstado     = (item.idEstadoPedido as number) ?? 0;
   const tipoOperacion = (item.tipoOperacion as string) ?? '';
   return {
@@ -97,12 +100,14 @@ function mapBackendToOrder(item: Record<string, unknown>): Order {
     fecha:         item.creadoEn
                      ? new Date(item.creadoEn as string).toLocaleDateString('es-CO')
                      : '',
+    _fechaRaw:     (item.creadoEn as string) ?? '',
     destinatario:  (item.destinatarioNombre as string) ?? '',
     telefono:      (item.destinatarioTelefono as string) ?? '',
     origen:        'Bogota, CO',
     destino:       (item.direccion as string) ?? '',
     companyName:   (item.usuarioSolicitud as string) ?? '',
     mensajero:     (item.usuarioRepartidor as string) ?? undefined,
+    mensajeroTelefono: (item.usuarioRepartidorTelefono as string) ?? undefined,
     pago:          (item.metodoRecepcion as string) ?? '',
     metodoEntrega: tipoOperacion,
     fragil:        (item.fragil as boolean) ?? false,
@@ -121,15 +126,26 @@ const StatusBadge = ({ estado }: StatusBadgeProps) => {
   );
 };
 
+// Valida formato YYYY-MM-DD
+function parseFecha(texto: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto.trim())) return null;
+  const d = new Date(`${texto.trim()}T00:00:00`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export default function OrderHistoryScreen({ navigation }: Props) {
   const { usuario } = useAuth();
 
-  const [pedidos,       setPedidos]       = useState<Order[]>([]);
+  const [pedidos,       setPedidos]       = useState<(Order & { _fechaRaw?: string })[]>([]);
   const [cargando,      setCargando]      = useState<boolean>(false);
   const [refrescando,   setRefrescando]   = useState<boolean>(false);
   const [error,         setError]         = useState<string | null>(null);
   const [busqueda,      setBusqueda]      = useState<string>('');
   const [pedidoSelecto, setPedidoSelecto] = useState<Order | null>(null);
+
+  const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('todos');
+  const [fechaDesde,  setFechaDesde]  = useState<string>('');
+  const [fechaHasta,  setFechaHasta]  = useState<string>('');
 
   const fetchPedidos = useCallback(async (esRefresh = false): Promise<void> => {
     if (esRefresh) setRefrescando(true);
@@ -138,17 +154,16 @@ export default function OrderHistoryScreen({ navigation }: Props) {
 
     try {
       const idUsuario = usuario?.idUsuario;
-      const url = idUsuario
-        ? `${ENDPOINTS.PEDIDOS.GET_ALL}?idUsuario=${idUsuario}`
-        : ENDPOINTS.PEDIDOS.GET_ALL;
+      const base = idUsuario
+        ? `${ENDPOINTS.PEDIDOS.GET_ALL}?idUsuario=${idUsuario}&limit=50&page=1`
+        : `${ENDPOINTS.PEDIDOS.GET_ALL}?limit=50&page=1`;
 
-      const { data } = await apiClient.get(url);
-      const lista: Order[] = Array.isArray(data)
+      const { data } = await apiClient.get(base);
+      const lista = Array.isArray(data)
         ? data.map((item: Record<string, unknown>) => mapBackendToOrder(item))
         : Array.isArray(data?.items)
           ? data.items.map((item: Record<string, unknown>) => mapBackendToOrder(item))
           : [];
-      console.log('PEDIDOS RECIBIDOS:', lista.length);
       setPedidos(lista);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string };
@@ -165,13 +180,61 @@ export default function OrderHistoryScreen({ navigation }: Props) {
     }, [fetchPedidos]),
   );
 
-  const filtrados = pedidos.filter(
+  // Filtro por fecha
+  const filtrarPorFecha = (lista: (Order & { _fechaRaw?: string })[]) => {
+    if (filtroFecha === 'todos') return lista;
+
+    const ahora = new Date();
+    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+    return lista.filter((p) => {
+      if (!p._fechaRaw) return false;
+      const f = new Date(p._fechaRaw);
+      if (isNaN(f.getTime())) return false;
+
+      if (filtroFecha === 'hoy') {
+        return f >= inicioHoy;
+      }
+      if (filtroFecha === 'semana') {
+        const hace7 = new Date(inicioHoy);
+        hace7.setDate(hace7.getDate() - 7);
+        return f >= hace7;
+      }
+      if (filtroFecha === 'mes') {
+        const hace30 = new Date(inicioHoy);
+        hace30.setDate(hace30.getDate() - 30);
+        return f >= hace30;
+      }
+      if (filtroFecha === 'custom') {
+        const desde = parseFecha(fechaDesde);
+        const hasta = parseFecha(fechaHasta);
+        if (desde && f < desde) return false;
+        if (hasta) {
+          const finDia = new Date(hasta);
+          finDia.setHours(23, 59, 59, 999);
+          if (f > finDia) return false;
+        }
+        return true;
+      }
+      return true;
+    });
+  };
+
+  const filtrados = filtrarPorFecha(pedidos).filter(
     (p) =>
       p.id.toLowerCase().includes(busqueda.toLowerCase()) ||
       (p.destino ?? '').toLowerCase().includes(busqueda.toLowerCase()),
   );
 
   const inicial = usuario?.nombres?.charAt(0)?.toUpperCase() ?? 'U';
+
+  const FILTROS: { key: FiltroFecha; label: string }[] = [
+    { key: 'todos',  label: 'Todos' },
+    { key: 'hoy',    label: 'Hoy' },
+    { key: 'semana', label: 'Semana' },
+    { key: 'mes',    label: 'Mes' },
+    { key: 'custom', label: 'Fecha' },
+  ];
 
   return (
     <View style={styles.wrapper}>
@@ -204,7 +267,9 @@ export default function OrderHistoryScreen({ navigation }: Props) {
             <Text style={styles.statIcon}>📋</Text>
           </View>
           <Text style={styles.statValue}>{pedidos.length}</Text>
-          <Text style={[styles.statSub, { color: COLORS.primary }]}>Activos este mes</Text>
+          <Text style={[styles.statSub, { color: COLORS.primary }]}>
+            {filtrados.length} mostrados
+          </Text>
         </View>
 
         <Text style={styles.sectionTitle}>Historial de Pedidos</Text>
@@ -220,10 +285,100 @@ export default function OrderHistoryScreen({ navigation }: Props) {
               onChangeText={setBusqueda}
             />
           </View>
-          <TouchableOpacity style={styles.filterBtn}>
-            <Text>⇅</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* FILTROS POR FECHA */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: 12 }}
+          contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+        >
+          {FILTROS.map((f) => (
+            <TouchableOpacity
+              key={f.key}
+              onPress={() => setFiltroFecha(f.key)}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical:   8,
+                borderRadius:      999,
+                backgroundColor:   filtroFecha === f.key ? COLORS.primary : '#F1F5F9',
+              }}
+            >
+              <Text style={{
+                color:      filtroFecha === f.key ? '#fff' : '#64748B',
+                fontWeight: '600',
+                fontSize:   13,
+              }}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* RANGO PERSONALIZADO */}
+        {filtroFecha === 'custom' && (
+          <View style={{
+            backgroundColor:   '#F8FAFC',
+            borderRadius:      12,
+            padding:           12,
+            marginBottom:      12,
+            borderWidth:       1,
+            borderColor:       COLORS.border,
+          }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 }}>
+              Rango de fechas (YYYY-MM-DD)
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>Desde</Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#fff',
+                    borderRadius:    8,
+                    borderWidth:     1,
+                    borderColor:     COLORS.border,
+                    paddingHorizontal: 10,
+                    paddingVertical:   8,
+                    fontSize:        13,
+                    color:           COLORS.textPrimary,
+                  }}
+                  placeholder="2026-06-01"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={fechaDesde}
+                  onChangeText={setFechaDesde}
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>Hasta</Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#fff',
+                    borderRadius:    8,
+                    borderWidth:     1,
+                    borderColor:     COLORS.border,
+                    paddingHorizontal: 10,
+                    paddingVertical:   8,
+                    fontSize:        13,
+                    color:           COLORS.textPrimary,
+                  }}
+                  placeholder="2026-06-30"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={fechaHasta}
+                  onChangeText={setFechaHasta}
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+            {(fechaDesde !== '' && parseFecha(fechaDesde) === null) ||
+             (fechaHasta !== '' && parseFecha(fechaHasta) === null) ? (
+              <Text style={{ fontSize: 11, color: '#DC2626', marginTop: 6 }}>
+                Formato inválido. Usa YYYY-MM-DD (ej: 2026-06-15)
+              </Text>
+            ) : null}
+          </View>
+        )}
 
         {cargando && (
           <View style={styles.emptyWrap}>
@@ -244,7 +399,7 @@ export default function OrderHistoryScreen({ navigation }: Props) {
         {!cargando && !error && filtrados.length === 0 && (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyEmoji}>📭</Text>
-            <Text style={styles.emptyText}>No hay pedidos aun</Text>
+            <Text style={styles.emptyText}>No hay pedidos en este filtro</Text>
           </View>
         )}
 
@@ -297,4 +452,4 @@ export default function OrderHistoryScreen({ navigation }: Props) {
       />
     </View>
   );
-} 
+}

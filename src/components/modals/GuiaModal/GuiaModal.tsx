@@ -53,7 +53,7 @@ body { font-family: Arial, sans-serif; padding: 32px; color: #000; }
 </head>
 <body>
 <div class="header">
-  <span class="logo">GLOBALLOGISTICS</span>
+  <span class="logo">GEOSERVIT EXPRESS</span>
   <span class="badge ${pedido.fragil ? 'badge-fragil' : ''}">${pedido.fragil ? 'FRAGIL' : 'ESTANDAR'}</span>
 </div>
 <div class="divider"></div>

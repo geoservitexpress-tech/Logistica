@@ -32,7 +32,6 @@ interface Pedido {
   precio:             number | null;
 }
 
-type Vista        = 'enReparto' | 'historial';
 type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'No entregado';
 
 const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'No entregado'];
@@ -61,24 +60,20 @@ function getNombre(val: string | null | object): string {
 }
 
 export default function OrdersScreen({ navigation }: Props) {
-  const [pedidosReparto,   setPedidosReparto]   = useState<Pedido[]>([]);
-  const [pedidosHistorial, setPedidosHistorial] = useState<Pedido[]>([]);
-  const [cargando,         setCargando]         = useState<boolean>(false);
-  const [refrescando,      setRefrescando]      = useState<boolean>(false);
-  const [busqueda,         setBusqueda]         = useState<string>('');
-  const [filtro,           setFiltro]           = useState<FiltroEstado>('Todos');
-  const [vista,            setVista]            = useState<Vista>('enReparto');
+  const [pedidos,     setPedidos]     = useState<Pedido[]>([]);
+  const [cargando,    setCargando]    = useState<boolean>(false);
+  const [refrescando, setRefrescando] = useState<boolean>(false);
+  const [busqueda,    setBusqueda]    = useState<string>('');
+  const [filtro,      setFiltro]      = useState<FiltroEstado>('Todos');
 
   const fetchPedidos = useCallback(async (esRefresh = false) => {
     if (esRefresh) setRefrescando(true);
     else setCargando(true);
     try {
-      const [resReparto, resHistorial] = await Promise.all([
-        apiClient.get('/supervisor/pedidos/en-reparto'),
-        apiClient.get(ENDPOINTS.PEDIDOS.GET_ALL),
-      ]);
-      setPedidosReparto(Array.isArray(resReparto.data) ? resReparto.data : Array.isArray(resReparto.data?.items) ? resReparto.data.items : []);
-      setPedidosHistorial(Array.isArray(resHistorial.data) ? resHistorial.data : Array.isArray(resHistorial.data?.items) ? resHistorial.data.items : []);
+      const { data } = await apiClient.get(`${ENDPOINTS.PEDIDOS.GET_ALL}?limit=100&page=1`);
+      setPedidos(
+        Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [],
+      );
     } catch (e) {
       console.log('Error pedidos supervisor', e);
     } finally {
@@ -89,9 +84,7 @@ export default function OrdersScreen({ navigation }: Props) {
 
   useFocusEffect(useCallback(() => { fetchPedidos(); }, [fetchPedidos]));
 
-  const pedidosActivos = vista === 'enReparto' ? pedidosReparto : pedidosHistorial;
-
-  const filtrados = pedidosActivos.filter((p) => {
+  const filtrados = pedidos.filter((p) => {
     const nombre = getNombre(p.destinatarioNombre);
     const matchBusqueda =
       p.numGuia.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -166,43 +159,11 @@ export default function OrdersScreen({ navigation }: Props) {
       {/* HEADER */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Gestión de Pedidos</Text>
+          <Text style={styles.headerTitle}>Pedidos</Text>
           <Text style={styles.headerSubtitle}>
-            {vista === 'enReparto'
-              ? `${pedidosReparto.length} envíos activos`
-              : `${pedidosHistorial.length} pedidos en total`}
+            {pedidos.length} pedidos en total
           </Text>
         </View>
-      </View>
-
-      {/* TABS */}
-      <View style={{
-        flexDirection:     'row',
-        backgroundColor:   COLORS.white,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-      }}>
-        {(['enReparto', 'historial'] as Vista[]).map((v) => (
-          <TouchableOpacity
-            key={v}
-            onPress={() => { setVista(v); setFiltro('Todos'); }}
-            style={{
-              flex:              1,
-              paddingVertical:   14,
-              alignItems:        'center',
-              borderBottomWidth: vista === v ? 2 : 0,
-              borderBottomColor: COLORS.primary,
-            }}
-          >
-            <Text style={{
-              fontSize:   13,
-              fontWeight: '700',
-              color:      vista === v ? COLORS.primary : COLORS.textMuted,
-            }}>
-              {v === 'enReparto' ? '🚚 En Reparto' : '📋 Historial'}
-            </Text>
-          </TouchableOpacity>
-        ))}
       </View>
 
       {/* SEARCH */}

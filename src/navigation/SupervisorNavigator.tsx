@@ -6,11 +6,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from '@/theme';
 
-import OrdersScreen    from '@/screens/supervisor/Orders/OrdersScreen';
-import EditOrderScreen from '@/screens/supervisor/Orders/EditOrder/EditOrderScreen';
-import TeamScreen      from '@/screens/supervisor/Team/TeamScreen';
-import InsightsScreen  from '@/screens/supervisor/Insights/InsightsScreen';
-import ProfileScreen   from '@/screens/client/screens/Profile/ProfileScreen';
+import OrdersScreen        from '@/screens/supervisor/Orders/OrdersScreen';
+import EditOrderScreen     from '@/screens/supervisor/Orders/EditOrder/EditOrderScreen';
+import CrearExpressScreen  from '@/screens/supervisor/Orders/CrearExpress/CrearExpressScreen';
+import TeamScreen          from '@/screens/supervisor/Team/TeamScreen';
+import InsightsScreen      from '@/screens/supervisor/Insights/InsightsScreen';
+import ProfileScreen       from '@/screens/client/screens/Profile/ProfileScreen';
 
 export type SupervisorTabParamList = {
   Estadisticas: undefined;
@@ -20,8 +21,9 @@ export type SupervisorTabParamList = {
 };
 
 export type OrdersStackParamList = {
-  OrdersList: undefined;
-  EditOrder:  { idPedido: string; numGuia: string };
+  OrdersList:   undefined;
+  EditOrder:    { idPedido: string; numGuia: string };
+  CrearExpress: undefined;
 };
 
 const Tab   = createBottomTabNavigator<SupervisorTabParamList>();
@@ -30,8 +32,9 @@ const Stack = createNativeStackNavigator<OrdersStackParamList>();
 function OrdersStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="OrdersList" component={OrdersScreen} />
-      <Stack.Screen name="EditOrder"  component={EditOrderScreen as React.ComponentType} />
+      <Stack.Screen name="OrdersList"   component={OrdersScreen} />
+      <Stack.Screen name="EditOrder"    component={EditOrderScreen as React.ComponentType} />
+      <Stack.Screen name="CrearExpress" component={CrearExpressScreen} />
     </Stack.Navigator>
   );
 }

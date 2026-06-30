@@ -74,12 +74,19 @@ const STATUS_CONFIG: Record<OrderEstado, StatusConfig> = {
     text:  '#D97706',
     icon:  '⏳',
   },
+  devuelto: {
+    label: 'Devuelto',
+    bg:    '#EDE9FE',
+    text:  '#7C3AED',
+    icon:  '↩️',
+  },
 };
 
 function mapEstadoPorId(idEstado: number, tipoOperacion: string): OrderEstado {
   switch (idEstado) {
     case 5: return 'entregado';
     case 7: return 'noEntregado';
+    case 8: return 'devuelto';
     case 6: return 'pendiente';
     case 3:
     case 4: return 'transito';
@@ -166,9 +173,12 @@ export default function OrderHistoryScreen({ navigation }: Props) {
           : [];
       setPedidos(lista);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string };
-      setError(err?.response?.data?.message ?? err?.message ?? 'Error al cargar pedidos');
-    } finally {
+  const err = e as { response?: { status?: number; data?: { message?: string } }; message?: string };
+  console.log('Error historial cliente status:', err?.response?.status);
+  console.log('Error historial cliente data:', JSON.stringify(err?.response?.data, null, 2));
+  console.log('Error historial cliente url:', base);
+  setError(err?.response?.data?.message ?? err?.message ?? 'Error al cargar pedidos');
+} finally {
       setCargando(false);
       setRefrescando(false);
     }

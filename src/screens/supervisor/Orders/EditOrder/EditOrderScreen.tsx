@@ -45,6 +45,7 @@ const ESTADOS = [
   { id: 4, nombre: 'En curso' },
   { id: 5, nombre: 'Entregado' },
   { id: 7, nombre: 'No entregado' },
+  { id: 8, nombre: 'Devuelto' },
 ];
 
 const COLORES_AVATAR = ['#E8712A', '#2563EB', '#16A34A', '#7C3AED', '#DC2626', '#0F2B46'];
@@ -105,29 +106,69 @@ export default function EditOrderScreen({ navigation, route }: Props) {
   };
 
   const handleGuardar = async (): Promise<void> => {
-    setGuardando(true);
-    try {
-      const body: Record<string, unknown> = {
-        idEstadoPedido:       estadoElegido,
-        nombreDestinatario:   destinatario || undefined,
-        telefonoDestinatario: telefono     || undefined,
-        fragil,
-      };
-      if (precio)       body.precio       = parseFloat(precio);
-      if (fechaEntrega) body.fechaEntrega = fechaEntrega;
+  if (!pedido) return;
+  setGuardando(true);
+  try {
+    const body: Record<string, unknown> = {};
 
-      await apiClient.patch(`/supervisor/pedidos/${idPedido}`, body);
-      Alert.alert('✅ Guardado', 'Pedido actualizado correctamente.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: unknown } }; message?: string };
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al guardar';
-      Alert.alert('Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
-    } finally {
-      setGuardando(false);
+    // Solo mandar campos que cambiaron
+    if (estadoElegido !== pedido.idEstadoPedido) {
+      body.idEstadoPedido = estadoElegido;
     }
-  };
+
+    const destOriginal = typeof pedido.destinatarioNombre === 'string' ? pedido.destinatarioNombre : '';
+    if (destinatario && destinatario !== destOriginal) {
+      body.nombreDestinatario = destinatario;
+    }
+
+    const telOriginal = typeof pedido.destinatarioTelefono === 'string' ? pedido.destinatarioTelefono : '';
+    if (telefono && telefono !== telOriginal) {
+      body.telefonoDestinatario = telefono;
+    }
+
+    if (fragil !== pedido.fragil) {
+      body.fragil = fragil;
+    }
+
+    const precioOriginal = pedido.precio != null
+      ? Math.round(parseFloat(String(pedido.precio)))
+      : 0;
+    const precioNuevo = precio ? parseFloat(precio) : 0;
+    if (precioNuevo > 0 && precioNuevo !== precioOriginal) {
+      body.precio = precioNuevo;
+    }
+
+    if (fechaEntrega && fechaEntrega !== pedido.fechaEntrega) {
+      body.fechaEntrega = fechaEntrega;
+    }
+
+    // Si no hay cambios
+    if (Object.keys(body).length === 0) {
+      Alert.alert('Sin cambios', 'No has modificado ningún campo.');
+      setGuardando(false);
+      return;
+    }
+
+    console.log('PATCH url:', `/supervisor/pedidos/${idPedido}`);
+    console.log('PATCH body:', JSON.stringify(body, null, 2));
+
+    await apiClient.patch(`/supervisor/pedidos/${idPedido}`, body);
+    Alert.alert('✅ Guardado', 'Pedido actualizado correctamente.', [
+      { text: 'OK', onPress: () => navigation.goBack() },
+    ]);
+  } catch (error: unknown) {
+    const err = error as {
+      response?: { status?: number; data?: { message?: unknown } };
+      message?: string;
+    };
+    console.log('PATCH error status:', err?.response?.status);
+    console.log('PATCH error data:', JSON.stringify(err?.response?.data, null, 2));
+    const msg = err?.response?.data?.message ?? err?.message ?? 'Error al guardar';
+    Alert.alert('Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
+  } finally {
+    setGuardando(false);
+  }
+};
 
   if (cargando) {
     return (

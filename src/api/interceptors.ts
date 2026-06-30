@@ -9,6 +9,11 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    if (config.method === 'patch' && config.url?.includes('/supervisor/pedidos/')) {
+      console.log('PATCH request headers:', JSON.stringify(config.headers, null, 2));
+      console.log('PATCH request data:', JSON.stringify(config.data, null, 2));
+      console.log('Token usado:', token ? token.slice(0, 50) + '...' : 'NO TOKEN');
+    }
     return config;
   },
   (error) => Promise.reject(error),

@@ -32,9 +32,9 @@ interface Pedido {
   precio:             number | null;
 }
 
-type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'No entregado';
+type FiltroEstado = 'Todos' | 'Asignado' | 'En curso' | 'Entregado' | 'No entregado' | 'Devuelto';
 
-const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'No entregado'];
+const FILTROS: FiltroEstado[] = ['Todos', 'Asignado', 'En curso', 'Entregado', 'No entregado', 'Devuelto'];
 
 const FILTRO_IDS: Record<FiltroEstado, number[]> = {
   'Todos':        [],
@@ -42,6 +42,7 @@ const FILTRO_IDS: Record<FiltroEstado, number[]> = {
   'En curso':     [4],
   'Entregado':    [5],
   'No entregado': [7],
+  'Devuelto':     [8],
 };
 
 const ESTADO_ID_CONFIG: Record<number, { bg: string; text: string; label: string }> = {
@@ -52,6 +53,7 @@ const ESTADO_ID_CONFIG: Record<number, { bg: string; text: string; label: string
   5: { bg: '#DCFCE7', text: '#16A34A', label: 'ENTREGADO' },
   6: { bg: '#FEE2E2', text: '#DC2626', label: 'CANCELADO' },
   7: { bg: '#FEE2E2', text: '#DC2626', label: 'NO ENTREGADO' },
+  8: { bg: '#EDE9FE', text: '#7C3AED', label: 'DEVUELTO' },
 };
 
 function getNombre(val: string | null | object): string {
@@ -226,6 +228,31 @@ export default function OrdersScreen({ navigation }: Props) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* FAB para crear servicio express */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CrearExpress')}
+        style={{
+          position:        'absolute',
+          bottom:          24,
+          right:           24,
+          width:           56,
+          height:          56,
+          borderRadius:    28,
+          backgroundColor: '#F59E0B',
+          alignItems:      'center',
+          justifyContent:  'center',
+          shadowColor:     '#000',
+          shadowOpacity:   0.25,
+          shadowRadius:    8,
+          shadowOffset:    { width: 0, height: 4 },
+          elevation:       6,
+        }}
+        activeOpacity={0.85}
+      >
+        <Text style={{ color: '#fff', fontSize: 28, fontWeight: '700' }}>+</Text>
+      </TouchableOpacity>
+
     </View>
   );
 }

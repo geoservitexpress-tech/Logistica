@@ -344,7 +344,6 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
                 style={[styles.numInput, !!errors.num1 && styles.inputError]}
                 value={form.num1}
                 onChangeText={update('num1')}
-                keyboardType="numeric"
                 placeholder="00"
                 placeholderTextColor={COLORS.textMuted}
               />
@@ -354,7 +353,6 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
               style={[styles.numInput, { width: 60 }, !!errors.num2 && styles.inputError]}
               value={form.num2}
               onChangeText={update('num2')}
-              keyboardType="numeric"
               placeholder="00"
               placeholderTextColor={COLORS.textMuted}
             />

@@ -519,9 +519,9 @@ export default function NewOrderScreen({ navigation }: Props) {
 
           <View style={[styles.row, { marginTop: 4 }]}>
             <Text style={styles.hashSymbol}>#</Text>
-            <StyledInput placeholder="1" value={form.addressNum1} onChangeText={update('addressNum1')} keyboardType="numeric" style={styles.inputNum} error={errors.addressNum1} />
+            <StyledInput placeholder="1" value={form.addressNum1} onChangeText={update('addressNum1')} style={styles.inputNum} error={errors.addressNum1} />
             <Text style={styles.separator}>-</Text>
-            <StyledInput placeholder="14" value={form.addressNum2} onChangeText={update('addressNum2')} keyboardType="numeric" style={styles.inputNum} error={errors.addressNum2} />
+            <StyledInput placeholder="14" value={form.addressNum2} onChangeText={update('addressNum2')} style={styles.inputNum} error={errors.addressNum2} />
           </View>
           <FieldErrorText message={errors.addressNum1 || errors.addressNum2} />
 

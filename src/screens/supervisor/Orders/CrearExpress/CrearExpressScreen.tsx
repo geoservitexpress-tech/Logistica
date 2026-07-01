@@ -399,11 +399,11 @@ export default function CrearExpressScreen({ navigation }: Props) {
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1 }}>
               <Label label="#" required />
-              <Input value={form.addressNum1} onChangeText={(v) => setForm((p) => ({ ...p, addressNum1: v }))} placeholder="14" keyboardType="numeric" />
+              <Input value={form.addressNum1} onChangeText={(v) => setForm((p) => ({ ...p, addressNum1: v }))} placeholder="14" />
             </View>
             <View style={{ flex: 1 }}>
               <Label label="-" required />
-              <Input value={form.addressNum2} onChangeText={(v) => setForm((p) => ({ ...p, addressNum2: v }))} placeholder="22" keyboardType="numeric" />
+              <Input value={form.addressNum2} onChangeText={(v) => setForm((p) => ({ ...p, addressNum2: v }))} placeholder="22" />
             </View>
           </View>
         </View>

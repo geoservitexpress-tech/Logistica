@@ -118,8 +118,8 @@ export function validateNewOrder(form: NewOrderFormInput): FieldErrors {
   setIfError(errors, 'idDepartamento', requiredField(form.idDepartamento, 'Selecciona el departamento'));
   setIfError(errors, 'idCiudad', requiredField(form.idCiudad, 'Selecciona la ciudad'));
   setIfError(errors, 'addressName', requiredField(form.addressName, 'Ingresa el número de vía'));
-  setIfError(errors, 'addressNum1', requiredField(form.addressNum1, 'Ingresa el número principal (#)'));
-  setIfError(errors, 'addressNum2', requiredField(form.addressNum2, 'Ingresa el número secundario (-)'));
+  setIfError(errors, 'addressNum1', requiredField(form.addressNum1, 'Ingresa el valor principal (#)'));
+  setIfError(errors, 'addressNum2', requiredField(form.addressNum2, 'Ingresa el valor secundario (-)'));
 
   if (form.tipoPago === 'cobrar_entrega') {
     setIfError(errors, 'valorCobrar', requiredField(form.valorCobrar, 'Ingresa el valor a cobrar al entregar'));
@@ -148,8 +148,8 @@ export function validateRequestPickup(form: RequestPickupFormInput): FieldErrors
   setIfError(errors, 'idDepartamento', requiredField(form.idDepartamento, 'Selecciona el departamento'));
   setIfError(errors, 'idCiudad', requiredField(form.idCiudad, 'Selecciona la ciudad'));
   setIfError(errors, 'addressName', requiredField(form.addressName, 'Ingresa el número de vía'));
-  setIfError(errors, 'num1', requiredField(form.num1, 'Ingresa el número principal (#)'));
-  setIfError(errors, 'num2', requiredField(form.num2, 'Ingresa el número secundario (-)'));
+  setIfError(errors, 'num1', requiredField(form.num1, 'Ingresa el valor principal (#)'));
+  setIfError(errors, 'num2', requiredField(form.num2, 'Ingresa el valor secundario (-)'));
 
   return errors;
 }

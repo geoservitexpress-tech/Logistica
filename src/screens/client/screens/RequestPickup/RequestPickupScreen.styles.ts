@@ -129,6 +129,11 @@ export default StyleSheet.create({
     paddingTop: SPACING.md,
   },
 
+  inputError: {
+    borderColor: COLORS.error,
+    backgroundColor: '#FEF2F2',
+  },
+
   dropdown: {
     flexDirection: 'row',
     alignItems: 'center',

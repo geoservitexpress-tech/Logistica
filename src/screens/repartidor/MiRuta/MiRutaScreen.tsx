@@ -26,7 +26,7 @@ const BODEGA_LAT = 4.6962;
 const BODEGA_LNG = -74.0858;
 
 export default function MiRutaScreen({ navigation }: Props) {
-  const { pedidos, cargando, cargarPedidos } = useRuta();
+  const { pedidos, cargando, error, cargarPedidos } = useRuta();
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
 
   useFocusEffect(useCallback(() => { cargarPedidos(); }, [cargarPedidos]));
@@ -136,6 +136,25 @@ export default function MiRutaScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        {!!error && (
+          <View style={{
+            backgroundColor: '#FEE2E2',
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: '#FECACA',
+          }}>
+            <Text style={{ color: COLORS.error, fontWeight: '700', marginBottom: 4 }}>
+              No se pudo cargar tu ruta
+            </Text>
+            <Text style={{ color: '#991B1B', fontSize: 13 }}>{error}</Text>
+            <TouchableOpacity onPress={cargarPedidos} style={{ marginTop: 10 }}>
+              <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* PEDIDOS FILTRADOS */}
         <View style={styles.filterRow}>
           <Text style={styles.sectionTitle}>
@@ -144,7 +163,7 @@ export default function MiRutaScreen({ navigation }: Props) {
           <Text style={{ color: '#64748B', fontSize: 13 }}>{pedidosFiltrados.length} restantes</Text>
         </View>
 
-        {pedidosFiltrados.length === 0 && (
+        {pedidosFiltrados.length === 0 && !error && (
           <View style={{ alignItems: 'center', paddingVertical: 32 }}>
             <Text style={{ fontSize: 40 }}>✅</Text>
             <Text style={{ fontSize: 18, fontWeight: '700', color: '#0F2B46', marginTop: 12 }}>

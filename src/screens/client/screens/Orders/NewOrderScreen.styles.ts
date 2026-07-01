@@ -34,6 +34,8 @@ interface Styles {
   inputMultiline: TextStyle;
   inputFlex: TextStyle;
   inputNum: TextStyle;
+  inputError: ViewStyle;
+  dropdownError: ViewStyle;
 
   dropdown: ViewStyle;
   dropdownSm: ViewStyle;
@@ -134,6 +136,14 @@ export default StyleSheet.create<Styles>({
   inputMultiline: { height: 80, paddingTop: SPACING.md },
   inputFlex:      { flex: 1 },
   inputNum:       { width: 70 },
+  inputError: {
+    borderColor: COLORS.error,
+    backgroundColor: '#FEF2F2',
+  },
+  dropdownError: {
+    borderColor: COLORS.error,
+    backgroundColor: '#FEF2F2',
+  },
 
   dropdown: {
     flexDirection: 'row',

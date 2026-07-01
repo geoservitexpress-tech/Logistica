@@ -8,19 +8,22 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   TextInput,
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
+import { COLORS } from '@/theme';
+import FormErrorBanner, { FieldErrorText } from '@/components/feedback/FormErrorBanner/FormErrorBanner';
+import { clearFieldError, getApiErrorMessage } from '@/utils/helpers';
+import { validateRegister } from '@/utils/validators';
+import type { FieldErrors } from '@/utils/validators';
 import type { RegisterScreenProps } from './RegisterScreen.types';
 
 const ROL_ID_CLIENTE             = 1;
 const TIPO_DOCUMENTO_ID_REGISTRO = 1;
 
-// ← FUERA del componente principal
 interface CampoProps {
   label:         string;
   placeholder:   string;
@@ -30,21 +33,37 @@ interface CampoProps {
   secure?:       boolean;
   showToggle?:   boolean;
   onToggle?:     () => void;
+  required?:     boolean;
+  error?:        string;
 }
 
-function Campo({ label, placeholder, value, onChangeText, keyboardType, secure, showToggle, onToggle }: CampoProps) {
+function Campo({
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  keyboardType,
+  secure,
+  showToggle,
+  onToggle,
+  required,
+  error,
+}: CampoProps) {
+  const borderColor = error ? COLORS.error : value ? '#E8712A' : '#E2E8F0';
+
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: error ? 6 : 16 }}>
       <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F2B46', marginBottom: 6 }}>
         {label}
+        {required && <Text style={{ color: COLORS.error }}> *</Text>}
       </Text>
       <View style={{
         flexDirection:     'row',
         alignItems:        'center',
-        backgroundColor:   '#F8FAFC',
+        backgroundColor:   error ? '#FEF2F2' : '#F8FAFC',
         borderRadius:      12,
         borderWidth:       1.5,
-        borderColor:       value ? '#E8712A' : '#E2E8F0',
+        borderColor,
         paddingHorizontal: 14,
         height:            50,
       }}>
@@ -65,6 +84,7 @@ function Campo({ label, placeholder, value, onChangeText, keyboardType, secure, 
           </TouchableOpacity>
         )}
       </View>
+      <FieldErrorText message={error} />
     </View>
   );
 }
@@ -82,29 +102,57 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [terminos,      setTerminos]      = useState(false);
   const [showPass,      setShowPass]      = useState(false);
   const [showPass2,     setShowPass2]     = useState(false);
+  const [errors,        setErrors]        = useState<FieldErrors>({});
+  const [submitError,   setSubmitError]   = useState('');
+
+  function updateField(field: string, value: string) {
+    const setters: Record<string, (v: string) => void> = {
+      nombres: setNombres,
+      apellidos: setApellidos,
+      correo: setCorreo,
+      telefono: setTelefono,
+      documento: setDocumento,
+      password: setPassword,
+      confirmarPass: setConfirmarPass,
+    };
+    setters[field]?.(value);
+    setErrors((prev) => clearFieldError(prev, field));
+    setSubmitError('');
+  }
 
   async function handleRegister() {
-    if (!nombres || !apellidos || !correo || !telefono || !documento || !password) {
-      Alert.alert('Campos requeridos', 'Completa todos los campos.');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos 8 caracteres.');
-      return;
-    }
-    if (password !== confirmarPass) {
-      Alert.alert('Contraseñas no coinciden', 'Las contraseñas deben ser iguales.');
-      return;
-    }
-    if (!terminos) {
-      Alert.alert('Términos', 'Debes aceptar los términos.');
-      return;
-    }
-    await registrar({
-      nombres, apellidos, correo, telefono, documento, password,
-      fkTipoDocumento: TIPO_DOCUMENTO_ID_REGISTRO,
-      idRol:           ROL_ID_CLIENTE,
+    const nextErrors = validateRegister({
+      nombres,
+      apellidos,
+      correo,
+      telefono,
+      documento,
+      password,
+      confirmarPass,
+      terminos,
     });
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      setSubmitError('');
+      return;
+    }
+
+    try {
+      setSubmitError('');
+      await registrar({
+        nombres,
+        apellidos,
+        correo: correo.trim(),
+        telefono,
+        documento,
+        password,
+        fkTipoDocumento: TIPO_DOCUMENTO_ID_REGISTRO,
+        idRol:           ROL_ID_CLIENTE,
+      });
+    } catch (error: unknown) {
+      setSubmitError(getApiErrorMessage(error, 'No pudimos crear tu cuenta. Intenta de nuevo.'));
+    }
   }
 
   return (
@@ -116,7 +164,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* HEADER */}
           <View style={{
             paddingTop:        Platform.OS === 'ios' ? 56 : 40,
             paddingBottom:     28,
@@ -145,7 +192,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             </View>
           </View>
 
-          {/* FORMULARIO */}
           <View style={{
             flex:                 1,
             backgroundColor:      '#fff',
@@ -155,16 +201,47 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             paddingTop:           32,
             paddingBottom:        48,
           }}>
-            <Text style={{ fontSize: 14, color: '#94A3B8', marginBottom: 24 }}>
+            <Text style={{ fontSize: 14, color: '#94A3B8', marginBottom: 20 }}>
               Completa tus datos para registrarte como cliente.
             </Text>
 
+            <FormErrorBanner errors={errors} />
+
+            {!!submitError && (
+              <View style={{
+                backgroundColor: COLORS.errorBg,
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: '#FECACA',
+              }}>
+                <Text style={{ color: COLORS.error, fontSize: 13, fontWeight: '600' }}>
+                  {submitError}
+                </Text>
+              </View>
+            )}
+
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Campo label="Nombres" placeholder="María" value={nombres} onChangeText={setNombres} />
+                <Campo
+                  label="Nombres"
+                  placeholder="María"
+                  value={nombres}
+                  onChangeText={(v) => updateField('nombres', v)}
+                  required
+                  error={errors.nombres}
+                />
               </View>
               <View style={{ flex: 1 }}>
-                <Campo label="Apellidos" placeholder="Pérez" value={apellidos} onChangeText={setApellidos} />
+                <Campo
+                  label="Apellidos"
+                  placeholder="Pérez"
+                  value={apellidos}
+                  onChangeText={(v) => updateField('apellidos', v)}
+                  required
+                  error={errors.apellidos}
+                />
               </View>
             </View>
 
@@ -172,57 +249,70 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               label="Número de Documento (CC)"
               placeholder="1020304050"
               value={documento}
-              onChangeText={setDocumento}
+              onChangeText={(v) => updateField('documento', v)}
               keyboardType="numeric"
+              required
+              error={errors.documento}
             />
 
             <Campo
               label="Correo electrónico"
               placeholder="correo@empresa.com"
               value={correo}
-              onChangeText={setCorreo}
+              onChangeText={(v) => updateField('correo', v)}
               keyboardType="email-address"
+              required
+              error={errors.correo}
             />
 
             <Campo
               label="Teléfono"
               placeholder="+57 300 123 4567"
               value={telefono}
-              onChangeText={setTelefono}
+              onChangeText={(v) => updateField('telefono', v)}
               keyboardType="phone-pad"
+              required
+              error={errors.telefono}
             />
 
             <Campo
               label="Contraseña"
               placeholder="Mínimo 8 caracteres"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => updateField('password', v)}
               secure
               showToggle={showPass}
               onToggle={() => setShowPass(!showPass)}
+              required
+              error={errors.password}
             />
 
             <Campo
               label="Confirmar Contraseña"
               placeholder="Repite tu contraseña"
               value={confirmarPass}
-              onChangeText={setConfirmarPass}
+              onChangeText={(v) => updateField('confirmarPass', v)}
               secure
               showToggle={showPass2}
               onToggle={() => setShowPass2(!showPass2)}
+              required
+              error={errors.confirmarPass}
             />
 
-            {/* TÉRMINOS */}
             <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 }}
-              onPress={() => setTerminos(!terminos)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: errors.terminos ? 8 : 28 }}
+              onPress={() => {
+                setTerminos(!terminos);
+                setErrors((prev) => clearFieldError(prev, 'terminos'));
+                setSubmitError('');
+              }}
             >
               <View style={{
                 width:           22,
                 height:          22,
                 borderRadius:    6,
                 borderWidth:     2,
-                borderColor:     terminos ? '#E8712A' : '#E2E8F0',
+                borderColor:     errors.terminos ? COLORS.error : terminos ? '#E8712A' : '#E2E8F0',
                 backgroundColor: terminos ? '#E8712A' : 'transparent',
                 alignItems:      'center',
                 justifyContent:  'center',
@@ -234,8 +324,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 <Text style={{ color: '#E8712A', fontWeight: '700' }}>Términos y Condiciones</Text>
               </Text>
             </TouchableOpacity>
+            <FieldErrorText message={errors.terminos} />
+            <View style={{ marginBottom: errors.terminos ? 20 : 0 }} />
 
-            {/* BOTON */}
             <TouchableOpacity
               onPress={handleRegister}
               disabled={loading}

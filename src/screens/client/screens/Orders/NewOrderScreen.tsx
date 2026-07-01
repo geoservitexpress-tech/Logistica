@@ -23,6 +23,10 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '@/theme';
 import { useAuth } from '@/context/AuthContext';
+import FormErrorBanner, { FieldErrorText } from '@/components/feedback/FormErrorBanner/FormErrorBanner';
+import { clearFieldError, getApiErrorMessage } from '@/utils/helpers';
+import { validateNewOrder } from '@/utils/validators';
+import type { FieldErrors } from '@/utils/validators';
 import styles from './NewOrderScreen.styles';
 import DeliveryMethodModal from '@/components/modals/DeliveryMethodModal';
 import GuiaModal from '@/components/modals/GuiaModal';
@@ -86,6 +90,7 @@ interface SectionCardProps {
 interface InputLabelProps {
   label:     string;
   required?: boolean;
+  error?:    string;
 }
 
 interface StyledInputProps {
@@ -95,12 +100,14 @@ interface StyledInputProps {
   keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'decimal-pad';
   multiline?:   boolean;
   style?:       object;
+  error?:       string;
 }
 
 interface DropdownProps {
   value:   string;
   onPress: () => void;
   style?:  object;
+  error?:  string;
 }
 
 interface SimpleMenuProps {
@@ -161,15 +168,20 @@ const SectionCard = ({ icon, title, children }: SectionCardProps) => (
   </View>
 );
 
-const InputLabel = ({ label, required }: InputLabelProps) => (
-  <Text style={styles.label}>
+const InputLabel = ({ label, required, error }: InputLabelProps) => (
+  <Text style={[styles.label, !!error && { color: COLORS.error }]}>
     {label}{required && <Text style={styles.required}> *</Text>}
   </Text>
 );
 
-const StyledInput = ({ placeholder, value, onChangeText, keyboardType, multiline, style }: StyledInputProps) => (
+const StyledInput = ({ placeholder, value, onChangeText, keyboardType, multiline, style, error }: StyledInputProps) => (
   <TextInput
-    style={[styles.input, multiline && styles.inputMultiline, style]}
+    style={[
+      styles.input,
+      multiline && styles.inputMultiline,
+      !!error && styles.inputError,
+      style,
+    ]}
     placeholder={placeholder}
     placeholderTextColor={COLORS.textMuted}
     value={value}
@@ -182,8 +194,8 @@ const StyledInput = ({ placeholder, value, onChangeText, keyboardType, multiline
   />
 );
 
-const Dropdown = ({ value, onPress, style }: DropdownProps) => (
-  <TouchableOpacity style={[styles.dropdown, style]} onPress={onPress}>
+const Dropdown = ({ value, onPress, style, error }: DropdownProps) => (
+  <TouchableOpacity style={[styles.dropdown, !!error && styles.dropdownError, style]} onPress={onPress}>
     <Text style={[styles.dropdownText, !value && { color: COLORS.textMuted }]}>
       {value || 'Seleccionar...'}
     </Text>
@@ -242,6 +254,7 @@ export default function NewOrderScreen({ navigation }: Props) {
   const { usuario } = useAuth();
 
   const [form,     setForm]     = useState<FormState>(FORM_INICIAL);
+  const [errors,   setErrors]   = useState<FieldErrors>({});
   const [fotos,    setFotos]    = useState<string[]>([]);
   const [enviando, setEnviando] = useState<boolean>(false);
 
@@ -286,11 +299,14 @@ export default function NewOrderScreen({ navigation }: Props) {
     cargarCatalogos();
   }, []);
 
-  const update = (field: keyof FormState) => (val: string | boolean) =>
+  const update = (field: keyof FormState) => (val: string | boolean) => {
     setForm((p) => ({ ...p, [field]: val }));
+    setErrors((prev) => clearFieldError(prev, field));
+  };
 
   const resetForm = (): void => {
     setForm(FORM_INICIAL);
+    setErrors({});
     setFotos([]);
   };
 
@@ -312,26 +328,12 @@ export default function NewOrderScreen({ navigation }: Props) {
     setFotos((prev) => prev.filter((_, i) => i !== index));
 
   const handleCrearPedido = (): void => {
-    if (!form.companyName || !form.recipientName) {
-      Alert.alert('Campos requeridos', 'Completa empresa y destinatario.');
+    const nextErrors = validateNewOrder(form);
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
-    if (!form.recipientPhone) {
-      Alert.alert('Campos requeridos', 'Ingresa el telefono del destinatario.');
-      return;
-    }
-    if (!form.idPais || !form.idDepartamento || !form.idCiudad) {
-      Alert.alert('Campos requeridos', 'Selecciona Pais, Departamento y Ciudad.');
-      return;
-    }
-    if (!form.addressName || !form.addressNum1 || !form.addressNum2) {
-      Alert.alert('Campos requeridos', 'Completa la direccion de entrega.');
-      return;
-    }
-    if (form.tipoPago === 'cobrar_entrega' && !form.valorCobrar) {
-      Alert.alert('Campos requeridos', 'Ingresa el valor a cobrar al entregar.');
-      return;
-    }
+    setErrors({});
     setShowDeliveryModal(true);
   };
 
@@ -412,9 +414,7 @@ export default function NewOrderScreen({ navigation }: Props) {
       setShowGuiaModal(true);
 
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: unknown } }; message?: string };
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al crear el pedido';
-      Alert.alert('Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
+      Alert.alert('Error', getApiErrorMessage(error, 'Error al crear el pedido'));
     } finally {
       setEnviando(false);
     }
@@ -446,42 +446,51 @@ export default function NewOrderScreen({ navigation }: Props) {
         <Text style={styles.screenTitle}>Nuevo Pedido</Text>
         <Text style={styles.screenSubtitle}>Ingrese los detalles del manifiesto de carga</Text>
 
+        <FormErrorBanner errors={errors} />
+
         <SectionCard icon="[E]" title="Datos del Cliente">
-          <InputLabel label="Nombre de la Empresa" required />
-          <StyledInput placeholder="Ej. Global Tech Solutions" value={form.companyName} onChangeText={update('companyName')} />
-          <InputLabel label="Identificacion (CC/NIT)" required />
+          <InputLabel label="Nombre de la Empresa" required error={errors.companyName} />
+          <StyledInput placeholder="Ej. Global Tech Solutions" value={form.companyName} onChangeText={update('companyName')} error={errors.companyName} />
+          <FieldErrorText message={errors.companyName} />
+          <InputLabel label="Identificacion (CC/NIT)" required error={errors.idNumber} />
           <View style={styles.row}>
             <Dropdown value={form.idType} onPress={() => setShowIdTypeMenu(true)} style={styles.dropdownSm} />
-            <StyledInput placeholder="Numero de documento" value={form.idNumber} onChangeText={update('idNumber')} keyboardType="numeric" style={styles.inputFlex} />
+            <StyledInput placeholder="Numero de documento" value={form.idNumber} onChangeText={update('idNumber')} keyboardType="numeric" style={styles.inputFlex} error={errors.idNumber} />
           </View>
+          <FieldErrorText message={errors.idNumber} />
         </SectionCard>
 
         <SectionCard icon="[U]" title="Destinatario">
-          <InputLabel label="Nombre del Destinatario" required />
-          <StyledInput placeholder="Ej. Juan Perez" value={form.recipientName} onChangeText={update('recipientName')} />
-          <InputLabel label="Telefono del Destinatario" required />
-          <StyledInput placeholder="Ej. 300 123 4567" value={form.recipientPhone} onChangeText={update('recipientPhone')} keyboardType="phone-pad" />
+          <InputLabel label="Nombre del Destinatario" required error={errors.recipientName} />
+          <StyledInput placeholder="Ej. Juan Perez" value={form.recipientName} onChangeText={update('recipientName')} error={errors.recipientName} />
+          <FieldErrorText message={errors.recipientName} />
+          <InputLabel label="Telefono del Destinatario" required error={errors.recipientPhone} />
+          <StyledInput placeholder="Ej. 300 123 4567" value={form.recipientPhone} onChangeText={update('recipientPhone')} keyboardType="phone-pad" error={errors.recipientPhone} />
+          <FieldErrorText message={errors.recipientPhone} />
         </SectionCard>
 
         <SectionCard icon="[T]" title="Informacion de Envio">
-          <InputLabel label="Pais" required />
-          <Dropdown value={form.nombrePais} onPress={() => setShowPaisMenu(true)} />
+          <InputLabel label="Pais" required error={errors.idPais} />
+          <Dropdown value={form.nombrePais} onPress={() => setShowPaisMenu(true)} error={errors.idPais} />
+          <FieldErrorText message={errors.idPais} />
 
           {form.idPais !== '' && (
             <>
-              <InputLabel label="Departamento" required />
-              <Dropdown value={form.nombreDepartamento} onPress={() => setShowDeptoMenu(true)} />
+              <InputLabel label="Departamento" required error={errors.idDepartamento} />
+              <Dropdown value={form.nombreDepartamento} onPress={() => setShowDeptoMenu(true)} error={errors.idDepartamento} />
+              <FieldErrorText message={errors.idDepartamento} />
             </>
           )}
 
           {form.idDepartamento !== '' && (
             <>
-              <InputLabel label="Ciudad" required />
-              <Dropdown value={form.nombreCiudad} onPress={() => setShowCiudadMenu(true)} />
+              <InputLabel label="Ciudad" required error={errors.idCiudad} />
+              <Dropdown value={form.nombreCiudad} onPress={() => setShowCiudadMenu(true)} error={errors.idCiudad} />
+              <FieldErrorText message={errors.idCiudad} />
             </>
           )}
 
-          <InputLabel label="Dirección de Entrega" required />
+          <InputLabel label="Dirección de Entrega" required error={errors.addressName || errors.addressNum1 || errors.addressNum2} />
 
           {previewDireccion.length > 2 && (
             <View style={{
@@ -501,18 +510,20 @@ export default function NewOrderScreen({ navigation }: Props) {
 
           <View style={styles.row}>
             <Dropdown value={form.addressType} onPress={() => setShowAddressMenu(true)} style={styles.dropdownSm} />
-            <StyledInput placeholder="38B" value={form.addressName} onChangeText={update('addressName')} style={styles.inputFlex} />
+            <StyledInput placeholder="38B" value={form.addressName} onChangeText={update('addressName')} style={styles.inputFlex} error={errors.addressName} />
           </View>
+          <FieldErrorText message={errors.addressName} />
           <Text style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6, marginTop: 4 }}>
             ↑ Número de vía antes del # (ej: 38B, 143, 7A)
           </Text>
 
           <View style={[styles.row, { marginTop: 4 }]}>
             <Text style={styles.hashSymbol}>#</Text>
-            <StyledInput placeholder="1" value={form.addressNum1} onChangeText={update('addressNum1')} keyboardType="numeric" style={styles.inputNum} />
+            <StyledInput placeholder="1" value={form.addressNum1} onChangeText={update('addressNum1')} keyboardType="numeric" style={styles.inputNum} error={errors.addressNum1} />
             <Text style={styles.separator}>-</Text>
-            <StyledInput placeholder="14" value={form.addressNum2} onChangeText={update('addressNum2')} keyboardType="numeric" style={styles.inputNum} />
+            <StyledInput placeholder="14" value={form.addressNum2} onChangeText={update('addressNum2')} keyboardType="numeric" style={styles.inputNum} error={errors.addressNum2} />
           </View>
+          <FieldErrorText message={errors.addressNum1 || errors.addressNum2} />
 
           <InputLabel label="Observaciones de Direccion" />
           <StyledInput placeholder="Apartamento, piso, casa, instrucciones..." value={form.addressObs} onChangeText={update('addressObs')} multiline />
@@ -621,8 +632,8 @@ export default function NewOrderScreen({ navigation }: Props) {
 
           {form.tipoPago === 'cobrar_entrega' && (
             <View style={{ marginTop: 4 }}>
-              <InputLabel label="Valor a cobrar al entregar" required />
-              <View style={styles.valueContainer}>
+              <InputLabel label="Valor a cobrar al entregar" required error={errors.valorCobrar} />
+              <View style={[styles.valueContainer, !!errors.valorCobrar && styles.inputError]}>
                 <Text style={styles.currencySymbol}>$</Text>
                 <TextInput
                   style={styles.valueInput}
@@ -633,6 +644,7 @@ export default function NewOrderScreen({ navigation }: Props) {
                   placeholderTextColor={COLORS.textMuted}
                 />
               </View>
+              <FieldErrorText message={errors.valorCobrar} />
             </View>
           )}
         </SectionCard>
@@ -709,6 +721,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         items={paises}
         onSelect={(item) => {
           setForm(p => ({ ...p, idPais: item.id, nombrePais: item.nombre, idDepartamento: '', nombreDepartamento: '', idCiudad: '', nombreCiudad: '' }));
+          setErrors((prev) => clearFieldError(prev, 'idPais'));
         }}
         onClose={() => setShowPaisMenu(false)}
       />
@@ -718,6 +731,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         items={departamentos}
         onSelect={(item) => {
           setForm(p => ({ ...p, idDepartamento: item.id, nombreDepartamento: item.nombre, idCiudad: '', nombreCiudad: '' }));
+          setErrors((prev) => clearFieldError(prev, 'idDepartamento'));
         }}
         onClose={() => setShowDeptoMenu(false)}
       />
@@ -727,6 +741,7 @@ export default function NewOrderScreen({ navigation }: Props) {
         items={ciudades}
         onSelect={(item) => {
           setForm(p => ({ ...p, idCiudad: item.id, nombreCiudad: item.nombre }));
+          setErrors((prev) => clearFieldError(prev, 'idCiudad'));
         }}
         onClose={() => setShowCiudadMenu(false)}
       />

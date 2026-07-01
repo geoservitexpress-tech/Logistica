@@ -15,6 +15,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import styles from './PedidosScreen.styles';
 import ResumenPedidoModal from '@/components/modals/ResumenPedidoModal/ResumenPedidoModal';
 import type { PedidoCliente } from '@/components/modals/ResumenPedidoModal/ResumenPedidoModal.types';
+import { getApiErrorMessage } from '@/utils/helpers';
+import {
+  ESTADO_PEDIDO,
+  filtrarPedidosPorAceptar,
+  parsePedidosList,
+  parsePedidosTotal,
+  pedidoEstadoId,
+  REPARTIDOR_PEDIDOS_PARAMS,
+} from '@/utils/pedidos-api';
 import { apiClient } from '@/api';
 import { COLORS } from '@/theme';
 
@@ -35,6 +44,27 @@ interface PedidoAPI {
   fotosPaqueteUrls:        string[];
   pagadoPorRemitente:      boolean;
   precio:                  number;
+}
+
+function mapPedidoApi(raw: Record<string, unknown>): PedidoAPI {
+  return {
+    idPedido:                Number(raw.idPedido),
+    numGuia:                 String(raw.numGuia ?? ''),
+    estadoPedido:            String(raw.estadoPedido ?? ''),
+    idEstadoPedido:          pedidoEstadoId(raw),
+    destinatarioNombre:      raw.destinatarioNombre ?? null,
+    destinatarioTelefono:    raw.destinatarioTelefono ?? null,
+    direccion:               String(raw.direccion ?? ''),
+    paquete:                 String(raw.paquete ?? ''),
+    fragil:                  Boolean(raw.fragil),
+    usuarioSolicitud:        String(raw.usuarioSolicitud ?? 'Cliente'),
+    fechaEntrega:            String(raw.fechaEntrega ?? ''),
+    tipoOperacion:           String(raw.tipoOperacion ?? 'DESPACHO'),
+    observacionesManifiesto: typeof raw.observacionesManifiesto === 'string' ? raw.observacionesManifiesto : null,
+    fotosPaqueteUrls:        Array.isArray(raw.fotosPaqueteUrls) ? raw.fotosPaqueteUrls as string[] : [],
+    pagadoPorRemitente:      Boolean(raw.pagadoPorRemitente),
+    precio:                  Number(raw.precio ?? 0),
+  };
 }
 
 function apiToPedidoCliente(p: PedidoAPI): PedidoCliente {
@@ -111,14 +141,27 @@ export default function PedidosScreen() {
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoCliente | null>(null);
   const [busqueda,           setBusqueda]           = useState<string>('');
   const [aceptando,          setAceptando]          = useState<number | null>(null);
+  const [error,              setError]              = useState<string>('');
+  const [totalServidor,      setTotalServidor]      = useState<number>(0);
 
   const cargarPedidos = async (esRefresco = false): Promise<void> => {
     if (esRefresco) setRefrescando(true);
     else setCargando(true);
+    setError('');
     try {
-      const { data } = await apiClient.get('/repartidor/pedidos');
-      const lista = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];      setPedidos(lista.filter((p: PedidoAPI) => p.idEstadoPedido === 2 || p.idEstadoPedido === 3));
+      const { data } = await apiClient.get('/repartidor/pedidos', {
+        params: REPARTIDOR_PEDIDOS_PARAMS,
+      });
+      const lista = parsePedidosList(data);
+      setTotalServidor(parsePedidosTotal(data));
+      setPedidos(filtrarPedidosPorAceptar(lista).map(mapPedidoApi));
     } catch (e) {
+      const msg = getApiErrorMessage(
+        e,
+        'No se pudieron cargar los pedidos. Verifica tu conexión e intenta de nuevo.',
+      );
+      setError(msg);
+      setPedidos([]);
       console.log('ERROR cargando pedidos repartidor:', e);
     } finally {
       setCargando(false);
@@ -226,10 +269,36 @@ export default function PedidosScreen() {
           <Text style={styles.sectionCount}>{filtrados.length} pedidos</Text>
         </View>
 
+        {!!error && (
+          <View style={{
+            backgroundColor: '#FEE2E2',
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: '#FECACA',
+          }}>
+            <Text style={{ color: COLORS.error, fontWeight: '700', marginBottom: 4 }}>
+              No se pudieron cargar los pedidos
+            </Text>
+            <Text style={{ color: '#991B1B', fontSize: 13 }}>{error}</Text>
+            <TouchableOpacity onPress={() => cargarPedidos(true)} style={{ marginTop: 10 }}>
+              <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* PEDIDOS */}
-        {filtrados.length === 0 ? (
+        {!error && filtrados.length === 0 ? (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <Text style={{ color: '#94A3B8', fontSize: 16 }}>No tienes pedidos por aceptar</Text>
+            <Text style={{ color: '#94A3B8', fontSize: 16, textAlign: 'center' }}>
+              No tienes pedidos por aceptar
+            </Text>
+            <Text style={{ color: '#CBD5E1', fontSize: 13, marginTop: 8, textAlign: 'center', paddingHorizontal: 24 }}>
+              {totalServidor > 0
+                ? `El servidor devolvió ${totalServidor} pedido(s), pero ninguno está en estado Asignado, Recibido o En curso. Revisa la pestaña Mi Ruta o Historial.`
+                : 'Aparecen aquí cuando te asignen pedidos en estado Asignado, Recibido o En curso.'}
+            </Text>
           </View>
         ) : (
           filtrados.map((item) => (
@@ -267,18 +336,37 @@ export default function PedidosScreen() {
                 <TouchableOpacity
                   style={{
                     flex:            1,
-                    backgroundColor: aceptando === item.idPedido ? '#94A3B8' : '#10B981',
+                    backgroundColor: (
+                      item.idEstadoPedido === ESTADO_PEDIDO.EN_CURSO
+                      || item.idEstadoPedido === ESTADO_PEDIDO.CREADO
+                    )
+                      ? '#94A3B8'
+                      : aceptando === item.idPedido
+                        ? '#94A3B8'
+                        : '#10B981',
                     borderRadius:    8,
                     padding:         10,
                     alignItems:      'center',
                     justifyContent:  'center',
                   }}
                   onPress={() => aceptarPedido(item)}
-                  disabled={aceptando === item.idPedido}
+                  disabled={
+                    aceptando === item.idPedido
+                    || item.idEstadoPedido === ESTADO_PEDIDO.EN_CURSO
+                    || item.idEstadoPedido === ESTADO_PEDIDO.CREADO
+                  }
                 >
                   {aceptando === item.idPedido
                     ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Aceptar</Text>
+                    : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
+                        {item.idEstadoPedido === ESTADO_PEDIDO.EN_CURSO
+                          ? 'En Mi Ruta'
+                          : item.idEstadoPedido === ESTADO_PEDIDO.CREADO
+                            ? 'Pendiente'
+                            : item.idEstadoPedido === ESTADO_PEDIDO.ASIGNADO
+                              ? 'Recibir'
+                              : 'Aceptar'}
+                      </Text>
                   }
                 </TouchableOpacity>
               </View>

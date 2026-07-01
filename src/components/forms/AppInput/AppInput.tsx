@@ -12,7 +12,9 @@ import { AppInputProps } from './AppInput.types';
 
 export default function AppInput({
   label,
+  required,
   error,
+  style,
   ...rest
 }: AppInputProps) {
   return (
@@ -20,12 +22,13 @@ export default function AppInput({
       {label && (
         <Text style={styles.label}>
           {label}
+          {required && <Text style={styles.required}> *</Text>}
         </Text>
       )}
 
       <TextInput
         placeholderTextColor="#94A3B8"
-        style={styles.input}
+        style={[styles.input, !!error && styles.inputError, style]}
         {...rest}
       />
 

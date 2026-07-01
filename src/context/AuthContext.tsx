@@ -12,6 +12,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '@/constants/api';
 import type { UserRole } from '@/types/user.types';
 
+const ROLE_PRIORITY: UserRole[] = [
+  'administrador',
+  'supervisor',
+  'repartidor',
+  'recolector',
+  'cliente',
+  'remitente',
+];
+
+export function resolveUserRole(roles: string[] | undefined): UserRole {
+  const normalized = (roles ?? []).map((r) => r.trim().toLowerCase());
+  for (const role of ROLE_PRIORITY) {
+    if (normalized.includes(role)) {
+      return role;
+    }
+  }
+  return 'cliente';
+}
+
 export interface Usuario {
   idUsuario?: string;
   correo:     string;
@@ -86,7 +105,7 @@ export function AuthProvider({ children }: Props) {
       const response = await axios.post(
         `${API_CONFIG.BASE_URL}/auth/login`,
         { correo: data.correo, password: data.password },
-        { timeout: 60000 },
+        { timeout: API_CONFIG.TIMEOUT },
       );
 
       const result = response.data;
@@ -95,8 +114,7 @@ export function AuthProvider({ children }: Props) {
       
       const usuarioLogueado = {
         ...result.usuario,
-        rol: result.usuario?.roles?.[0]?.toLowerCase() || 'cliente',
-        
+        rol: resolveUserRole(result.usuario?.roles),
       };
 
       console.log('RESULTADO LOGIN:', JSON.stringify(result));
@@ -134,14 +152,14 @@ export function AuthProvider({ children }: Props) {
           telefono:        data.telefono,
           idRol:           data.idRol,
         },
-        { timeout: 60000 },
+        { timeout: API_CONFIG.TIMEOUT },
       );
 
       const result = response.data;
 
       const usuarioRegistrado = {
         ...result.usuario,
-        rol: result.usuario?.roles?.[0]?.toLowerCase() || 'cliente',
+        rol: resolveUserRole(result.usuario?.roles),
       };
 
       setUsuario(usuarioRegistrado);

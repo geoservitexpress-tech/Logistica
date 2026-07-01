@@ -20,6 +20,10 @@ export const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMedium,
   },
 
+  required: {
+    color: COLORS.error,
+  },
+
   input: {
     borderWidth: 1,
 
@@ -36,6 +40,11 @@ export const styles = StyleSheet.create({
     color: COLORS.textPrimary,
 
     fontSize: 15,
+  },
+
+  inputError: {
+    borderColor: COLORS.error,
+    backgroundColor: '#FEF2F2',
   },
 
   error: {

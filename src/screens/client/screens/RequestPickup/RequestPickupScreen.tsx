@@ -18,6 +18,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { COLORS } from '@/theme';
 import { useAuth } from '@/context/AuthContext';
+import FormErrorBanner, { FieldErrorText } from '@/components/feedback/FormErrorBanner/FormErrorBanner';
+import { clearFieldError, getApiErrorMessage } from '@/utils/helpers';
+import { validateRequestPickup } from '@/utils/validators';
+import type { FieldErrors } from '@/utils/validators';
 import styles from './RequestPickupScreen.styles';
 import GuiaModal from '@/components/modals/GuiaModal';
 import type { Order } from '@/types/pedido.types';
@@ -50,11 +54,13 @@ interface FormState {
 interface InputLabelProps {
   label:     string;
   required?: boolean;
+  error?:    string;
 }
 
 interface DropdownProps {
   value:   string;
   onPress: () => void;
+  error?:  string;
 }
 
 interface CatalogoMenuProps {
@@ -81,14 +87,14 @@ const FORM_INICIAL: FormState = {
   tipoVia:            'Calle',
 };
 
-const InputLabel = ({ label, required = false }: InputLabelProps) => (
-  <Text style={styles.label}>
+const InputLabel = ({ label, required = false, error }: InputLabelProps) => (
+  <Text style={[styles.label, !!error && { color: COLORS.error }]}>
     {label}{required && <Text style={styles.required}> *</Text>}
   </Text>
 );
 
-const Dropdown = ({ value, onPress }: DropdownProps) => (
-  <TouchableOpacity style={styles.dropdown} onPress={onPress}>
+const Dropdown = ({ value, onPress, error }: DropdownProps) => (
+  <TouchableOpacity style={[styles.dropdown, !!error && styles.inputError]} onPress={onPress}>
     <Text style={[styles.dropdownText, !value && { color: COLORS.textMuted }]}>
       {value || 'Seleccionar...'}
     </Text>
@@ -130,6 +136,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
   const { destinoEntrega, pedidoBase } = route.params;
 
   const [form, setForm]         = useState<FormState>(FORM_INICIAL);
+  const [errors, setErrors]     = useState<FieldErrors>({});
   const [enviando, setEnviando] = useState<boolean>(false);
 
   const [paises,        setPaises]        = useState<CatalogoItem[]>([]);
@@ -162,23 +169,18 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
     cargarCatalogos();
   }, []);
 
-  const update = (field: keyof FormState) => (value: string) =>
+  const update = (field: keyof FormState) => (value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => clearFieldError(prev, field));
+  };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!form.companyName || !form.phone) {
-      Alert.alert('Campos requeridos', 'Completa nombre de empresa y telefono.');
+    const nextErrors = validateRequestPickup(form);
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
-    if (!form.idPais || !form.idDepartamento || !form.idCiudad) {
-      Alert.alert('Campos requeridos', 'Selecciona Pais, Departamento y Ciudad.');
-      return;
-    }
-    if (!form.addressName || !form.num1 || !form.num2) {
-      Alert.alert('Campos requeridos', 'Completa la direccion de recogida.');
-      return;
-    }
-
+    setErrors({});
     setEnviando(true);
 
     try {
@@ -231,9 +233,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
       setShowGuiaModal(true);
 
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: unknown } }; message?: string };
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al solicitar recogida';
-      Alert.alert('Error', typeof msg === 'string' ? msg : JSON.stringify(msg));
+      Alert.alert('Error', getApiErrorMessage(error, 'Error al solicitar recogida'));
     } finally {
       setEnviando(false);
     }
@@ -264,6 +264,8 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
           Complete los datos de origen para programar la recoleccion de su mercancia.
         </Text>
 
+        <FormErrorBanner errors={errors} />
+
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.iconContainer}>
@@ -272,24 +274,26 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
             <Text style={styles.cardTitle}>Datos de la Empresa</Text>
           </View>
 
-          <InputLabel label="Nombre de la Empresa" required />
+          <InputLabel label="Nombre de la Empresa" required error={errors.companyName} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!errors.companyName && styles.inputError]}
             placeholder="Ej. Logistica Global S.A."
             placeholderTextColor={COLORS.textMuted}
             value={form.companyName}
             onChangeText={update('companyName')}
           />
+          <FieldErrorText message={errors.companyName} />
 
-          <InputLabel label="Telefono de Contacto" required />
+          <InputLabel label="Telefono de Contacto" required error={errors.phone} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!errors.phone && styles.inputError]}
             placeholder="+57 000 000 0000"
             placeholderTextColor={COLORS.textMuted}
             value={form.phone}
             onChangeText={update('phone')}
             keyboardType="phone-pad"
           />
+          <FieldErrorText message={errors.phone} />
         </View>
 
         <View style={styles.card}>
@@ -300,40 +304,44 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
             <Text style={styles.cardTitle}>Direccion de Recogida</Text>
           </View>
 
-          <InputLabel label="Pais" required />
-          <Dropdown value={form.nombrePais} onPress={() => setShowPaisMenu(true)} />
+          <InputLabel label="Pais" required error={errors.idPais} />
+          <Dropdown value={form.nombrePais} onPress={() => setShowPaisMenu(true)} error={errors.idPais} />
+          <FieldErrorText message={errors.idPais} />
 
           {form.idPais !== '' && (
             <>
-              <InputLabel label="Departamento" required />
-              <Dropdown value={form.nombreDepartamento} onPress={() => setShowDeptoMenu(true)} />
+              <InputLabel label="Departamento" required error={errors.idDepartamento} />
+              <Dropdown value={form.nombreDepartamento} onPress={() => setShowDeptoMenu(true)} error={errors.idDepartamento} />
+              <FieldErrorText message={errors.idDepartamento} />
             </>
           )}
 
           {form.idDepartamento !== '' && (
             <>
-              <InputLabel label="Ciudad" required />
-              <Dropdown value={form.nombreCiudad} onPress={() => setShowCiudadMenu(true)} />
+              <InputLabel label="Ciudad" required error={errors.idCiudad} />
+              <Dropdown value={form.nombreCiudad} onPress={() => setShowCiudadMenu(true)} error={errors.idCiudad} />
+              <FieldErrorText message={errors.idCiudad} />
             </>
           )}
 
           <InputLabel label="Tipo de via" required />
           <Dropdown value={form.tipoVia} onPress={() => setShowViaMenu(true)} />
 
-          <InputLabel label="Nombre de via / Numero" required />
+          <InputLabel label="Nombre de via / Numero" required error={errors.addressName} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!errors.addressName && styles.inputError]}
             placeholder="Ej. Gran Via, 45"
             placeholderTextColor={COLORS.textMuted}
             value={form.addressName}
             onChangeText={update('addressName')}
           />
+          <FieldErrorText message={errors.addressName} />
 
           <View style={styles.rowAddress}>
             <View style={styles.numFieldWrap}>
               <Text style={styles.numLabel}>#</Text>
               <TextInput
-                style={styles.numInput}
+                style={[styles.numInput, !!errors.num1 && styles.inputError]}
                 value={form.num1}
                 onChangeText={update('num1')}
                 keyboardType="numeric"
@@ -343,7 +351,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
             </View>
             <Text style={styles.dash}>-</Text>
             <TextInput
-              style={[styles.numInput, { width: 60 }]}
+              style={[styles.numInput, { width: 60 }, !!errors.num2 && styles.inputError]}
               value={form.num2}
               onChangeText={update('num2')}
               keyboardType="numeric"
@@ -351,6 +359,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
               placeholderTextColor={COLORS.textMuted}
             />
           </View>
+          <FieldErrorText message={errors.num1 || errors.num2} />
 
           <InputLabel label="Observaciones de la Direccion" />
           <TextInput
@@ -413,6 +422,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
             idCiudad:           '',
             nombreCiudad:       '',
           }));
+          setErrors((prev) => clearFieldError(prev, 'idPais'));
         }}
         onClose={() => setShowPaisMenu(false)}
       />
@@ -428,6 +438,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
             idCiudad:           '',
             nombreCiudad:       '',
           }));
+          setErrors((prev) => clearFieldError(prev, 'idDepartamento'));
         }}
         onClose={() => setShowDeptoMenu(false)}
       />
@@ -441,6 +452,7 @@ export default function RequestPickupScreen({ navigation, route }: Props) {
             idCiudad:     item.id,
             nombreCiudad: item.nombre,
           }));
+          setErrors((prev) => clearFieldError(prev, 'idCiudad'));
         }}
         onClose={() => setShowCiudadMenu(false)}
       />

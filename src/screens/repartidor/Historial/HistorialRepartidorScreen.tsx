@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import styles from './HistorialRepartidorScreen.styles';
+import { getApiErrorMessage } from '@/utils/helpers';
+import { parsePedidosList, REPARTIDOR_PEDIDOS_PARAMS } from '@/utils/pedidos-api';
 import { apiClient } from '@/api';
 import { COLORS } from '@/theme';
 
@@ -34,16 +36,23 @@ export default function HistorialRepartidorScreen() {
   const [cargando,     setCargando]     = useState<boolean>(false);
   const [refrescando,  setRefrescando]  = useState<boolean>(false);
   const [filtroTiempo, setFiltroTiempo] = useState<FiltroTiempo>('hoy');
+  const [error,        setError]        = useState<string>('');
 
   const cargarHistorial = async (esRefresco = false): Promise<void> => {
     if (esRefresco) setRefrescando(true);
     else setCargando(true);
+    setError('');
     try {
-      const { data } = await apiClient.get('/repartidor/pedidos');
-      const lista = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];      setPedidos(lista.filter((p: Record<string, unknown>) =>
-        p.idEstadoPedido === 5 || p.idEstadoPedido === 7
-      ));
+      const { data } = await apiClient.get('/repartidor/pedidos', {
+        params: REPARTIDOR_PEDIDOS_PARAMS,
+      });
+      const lista = parsePedidosList(data);
+      setPedidos(lista.filter((p) =>
+        p.idEstadoPedido === 5 || p.idEstadoPedido === 7,
+      ) as PedidoHistorial[]);
     } catch (e) {
+      setError(getApiErrorMessage(e, 'No se pudo cargar el historial.'));
+      setPedidos([]);
       console.log('ERROR cargando historial:', e);
     } finally {
       setCargando(false);
@@ -155,7 +164,27 @@ export default function HistorialRepartidorScreen() {
         </View>
       </View>
 
-      {pedidosFiltrados.length === 0 ? (
+      {!!error && (
+        <View style={{
+          marginHorizontal: 16,
+          marginBottom: 12,
+          backgroundColor: '#FEE2E2',
+          borderRadius: 12,
+          padding: 14,
+          borderWidth: 1,
+          borderColor: '#FECACA',
+        }}>
+          <Text style={{ color: COLORS.error, fontWeight: '700', marginBottom: 4 }}>
+            No se pudo cargar el historial
+          </Text>
+          <Text style={{ color: '#991B1B', fontSize: 13 }}>{error}</Text>
+          <TouchableOpacity onPress={() => cargarHistorial(true)} style={{ marginTop: 10 }}>
+            <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {!error && pedidosFiltrados.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 40 }}>
           <Text style={{ fontSize: 40, marginBottom: 12 }}>📭</Text>
           <Text style={{ color: '#64748B', fontSize: 15 }}>No hay pedidos en este periodo</Text>
